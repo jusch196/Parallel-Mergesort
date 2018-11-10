@@ -2,9 +2,7 @@ package de.hhu.bsinfo.dxapp;
 
 public class SuperMergeAlgorithm extends Thread {
 
-    private static int[] array;
-
-    public SuperMergeAlgorithm(int array[], int pivotIndex) {
+public SuperMergeAlgorithm(int array[], int pivotIndex) {
 
         int length = array.length;
 
@@ -16,28 +14,28 @@ public class SuperMergeAlgorithm extends Thread {
 
         while (indexLeft < pivotIndex && indexRight < length) {
 
-            if (array[indexLeft] < array[indexRight]) {
-                finalArray[finalIndex] = array[indexLeft];
-                indexLeft++;
-            } else {
-                finalArray[finalIndex] = array[indexRight];
-                indexRight++;
-            }
-            finalIndex++;
+                if (array[indexLeft] < array[indexRight]) {
+                        finalArray[finalIndex] = array[indexLeft];
+                        indexLeft++;
+                } else {
+                        finalArray[finalIndex] = array[indexRight];
+                        indexRight++;
+                }
+                finalIndex++;
         }
 
         while (indexLeft < pivotIndex) {
-            finalArray[finalIndex] = array[indexLeft];
-            indexLeft++;
-            finalIndex++;
+                finalArray[finalIndex] = array[indexLeft];
+                indexLeft++;
+                finalIndex++;
         }
 
         while (indexRight < length) {
-            finalArray[finalIndex] = array[indexRight];
-            indexRight++;
-            finalIndex++;
+                finalArray[finalIndex] = array[indexRight];
+                indexRight++;
+                finalIndex++;
         }
 
         System.arraycopy(finalArray,0,array,0,length);
-    }
+}
 }
