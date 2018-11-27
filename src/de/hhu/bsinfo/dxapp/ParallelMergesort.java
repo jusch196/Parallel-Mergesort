@@ -2,16 +2,19 @@ package de.hhu.bsinfo.dxapp;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class ParallelMergesort {
 
         // CSVfile options
-        private static String filepath = "ressources/Data_10.csv";
+        private static String filepath = "ressources/Data_ZM.csv";
         private static String seperator = ", ";
 
         // Parallel or partialparallel?
-        private static Boolean parallel=true;
+        private static Boolean parallel=false;
+        final static int cores =10;
+        private static boolean powtwo = true;
 
         //Mergeebene
         private static int level = 1;
@@ -48,7 +51,7 @@ public class ParallelMergesort {
                 Boolean unevenflag = false;
 
                 //Evaluate number of available cores
-                int cores = Runtime.getRuntime().availableProcessors();
+                //int cores = Runtime.getRuntime().availableProcessors();
 
                 // Number of splits like for example available cores
                 split = cores;
@@ -87,6 +90,11 @@ public class ParallelMergesort {
 
                 // Run parallel/partial parallel Mergesort
                 while (split > 1) {
+
+                        double splitcheck = (double) split/2;
+                        if (splitcheck %1 != 0){
+                                powtwo = false;
+                        }
                         split /= 2;
                         threads = new Thread[split];
 
@@ -94,7 +102,6 @@ public class ParallelMergesort {
 
                                 //  i represents one block (left AND right half)
                                 System.out.println("\nSortiere Block " + i);
-
                                 if (parallel)
                                         mergeParallel(i);
                                 else
@@ -102,12 +109,27 @@ public class ParallelMergesort {
                         }
 
                         // Update listlength
-                        int[] tmp = new int[(int) Math.ceil((double) listlength.length / 2)];
-                        for (int i = 0; i < tmp.length; i++) {
-                                tmp[i] = listlength[2 * i];
+                        int[] tmp;
+                        if (!powtwo){
+                                tmp = new int[split+1];
 
-                                if (2 * i + 1 < listlength.length) {
-                                        tmp[i] += listlength[2 * i + 1];
+                                for (int i = 0; i < tmp.length-1; i++) {
+                                        tmp[i] = listlength[2 * i];
+                                        if (2 * i + 1 < listlength.length) {
+                                                tmp[i] += listlength[2 * i + 1];
+                                        }
+                                }
+                                tmp[tmp.length-1] = listlength[listlength.length-1];
+                                powtwo = true;
+                                split++;
+
+                        } else{
+                                tmp = new int[split];
+                                for (int i = 0; i < tmp.length; i++) {
+                                        tmp[i] = listlength[2 * i];
+                                        if (2 * i + 1 < listlength.length) {
+                                                tmp[i] += listlength[2 * i + 1];
+                                        }
                                 }
                         }
                         listlength = tmp;
@@ -117,21 +139,59 @@ public class ParallelMergesort {
                 // Print final array
                 //System.out.println("Finales Array: " + Arrays.toString(secondarray));
 
-                boolean check = true;
-                int count = 0;
-                for (int i = 0; i < secondarray.length - 1; i++) {
-                        if (secondarray[i] <= secondarray[i + 1]) {
-                                // do nothing
-                        } else {
-                                check = false;
-                                System.out.println("i: " + i);
-                                System.out.println("Vorgänger: " + secondarray[i]);
-                                System.out.println("Nachfolger:  " + secondarray[i + 1]);
-                                count++;
+                if (parallel){
+                        boolean check = true;
+                        int count = 0;
+                        int countnull =0;
+                        int seconcount =0, secondnull=0;
+                        for (int i = 0; i < secondarray.length - 1; i++) {
+                                if (secondarray[i] > secondarray[i+1]) {
+                                        check = false;
+                                        System.out.println("i: " + i);
+                                        System.out.println("Vorgänger: " + secondarray[i]);
+                                        System.out.println("Nachfolger:  " + secondarray[i + 1]);
+                                        count++;
+                                }
+
+                                if (secondarray[i] == 0)
+                                        countnull++;
                         }
+                        System.out.println("Ist das Array sortiert: " + check);
+                        System.out.println("Fehlstellungen: " + count);
+                        //System.out.println("Fehlstellungen array: " + seconcount);
+                        System.out.println("Nullen: " + countnull);
+                        //System.out.println("Nullen array: " + secondnull);
+                        //System.out.println("secondArray: \n" + Arrays.toString(secondarray));
+                        //System.out.println("Array: \n " + Arrays.toString(array));
                 }
-                System.out.println("Ist das Array sortiert: " + check);
-                System.out.println("Fehlstellungen: " + count);
+                else {
+                        boolean check = true;
+                        int count = 0;
+                        int countnull =0;
+                        int seconcount =0, secondnull=0;
+                        for (int i = 0; i < array.length - 1; i++) {
+                                if (array[i] > array[i+1]) {
+                                        check = false;
+                                        System.out.println("i: " + i);
+                                        System.out.println("Vorgänger: " + array[i]);
+                                        System.out.println("Nachfolger:  " + array[i + 1]);
+                                        count++;
+                                }
+
+                                if (array[i] == 0)
+                                        countnull++;
+                        }
+
+                        System.out.println("Ist das Array sortiert: " + check);
+                        System.out.println("Fehlstellungen: " + count);
+                        //System.out.println("Fehlstellungen array: " + seconcount);
+                        System.out.println("Nullen: " + countnull);
+                        //System.out.println("Array: \n" + Arrays.toString(array));
+                        //System.out.println("Nullen array: " + secondnull);
+                        //System.out.println("secondArray: \n " + Arrays.toString(secondarray));
+                        //System.out.println("Array: \n " + Arrays.toString(array));
+                }
+
         }
 
 
@@ -154,7 +214,7 @@ public class ParallelMergesort {
         private static void mergeParallel(int blockIndex) throws InterruptedException {
 
                 // Ressources need to be an even number for creating threads!
-                int ressources = level*2;
+                int ressources = (int) Math.pow(2, level);
                 Thread threads[] = new Thread[ressources];
 
                 // Endindex of the whole Block
@@ -162,6 +222,7 @@ public class ParallelMergesort {
                 for (int i=0; i<2*blockIndex+2; i++){
                         endIndex += listlength[i];
                 }
+                endIndex--;
 
                 // Startindeces of the left half
                 int leftStartIndex[] = new int[ressources];
@@ -187,7 +248,7 @@ public class ParallelMergesort {
                 rightStartIndex[0] = sum;
 
                 for (int i=1; i<ressources; i++) {
-                        rightStartIndex[i] = rightStartIndex[i-1]+1;
+                        rightStartIndex[i] = rightStartIndex[i-1]+2;
                         while (array[rightStartIndex[i]] <array[leftStartIndex[i]] && rightStartIndex[i] < endIndex){
                                 rightStartIndex[i]++;
                         }
@@ -205,54 +266,75 @@ public class ParallelMergesort {
                 for (int j=0; j<ressources-1; j++) {
                         rightEndIndex[j] = rightStartIndex[j+1]-1;
                 }
-                rightEndIndex[ressources-1] = endIndex-1;
+                rightEndIndex[ressources-1] = endIndex;
 
                 boolean loop = true;
-
                 while(loop) {
 
                         loop = false;
+
                         for (int i=1; i<ressources; i++) {
-
-                                if (array[leftEndIndex[i-1]] > array[rightStartIndex[i]]){
-                                        loop = true;
-
-                                        while (array[leftEndIndex[i-1]] > array[rightStartIndex[i]]) {
+                                        while (array[leftEndIndex[i-1]] > array[rightStartIndex[i]] && rightStartIndex[i] < rightEndIndex[i]-1) {
+                                                loop = true;
                                                 rightEndIndex[i-1]++;
                                                 rightStartIndex[i]++;
-
-                                                if (rightStartIndex[i] == rightEndIndex[i]){
-                                                        break;
-                                                }
-                                                if (rightEndIndex[i-1] == endIndex-1) {
-                                                        break;
-                                                }
                                         }
-                                }
                         }
 
                         for (int i=0; i<ressources-1; i++){
-
-                                if (array[leftStartIndex[i+1]] < array[rightStartIndex[i]]){
-                                        loop = true;
-
-                                        while (array[leftStartIndex[i+1]] < array[rightStartIndex[i]] ){
+                                        while (array[leftStartIndex[i+1]] < array[rightStartIndex[i]] && leftStartIndex[i+1] < leftEndIndex[i+1]-1){
+                                                loop = true;
                                                 leftEndIndex[i]++;
                                                 leftStartIndex[i+1]++;
-
-                                                if (leftStartIndex[i+1] == leftEndIndex[i+1]){
-                                                        break;
-                                                }
                                         }
-                                }
                         }
+
                 }
 
+                /*
                 System.out.println(Arrays.toString(leftStartIndex));
                 System.out.println(Arrays.toString(leftEndIndex));
                 System.out.println(Arrays.toString(rightStartIndex));
                 System.out.println(Arrays.toString(rightEndIndex));
                 System.out.println(Arrays.toString(listlength));
+                */
+
+                System.out.println("BLOCK: " + blockIndex);
+                System.out.println(Arrays.toString(listlength));
+                System.out.println(Arrays.toString(leftStartIndex));
+                System.out.println(Arrays.toString(leftEndIndex));
+                System.out.println(Arrays.toString(rightStartIndex));
+                System.out.println(Arrays.toString(rightEndIndex));
+                System.out.println(Arrays.toString(secondarray));
+                System.out.println(Arrays.toString(array));
+
+
+                for (int j=0; j<leftStartIndex.length; j++){
+                        Boolean check = true;
+                        int count = 0;
+
+                        for (int g=leftStartIndex[j]; g<leftEndIndex[j]-1; g++){
+                                if (array[g] > array[g+1]) {
+                                        check = false;
+                                        count++;
+                                }
+                        }
+
+                        System.out.println("links sortiert: " + check);
+                        System.out.println("Fehlstellungen: " + count);
+                        System.out.println("i: " + j);
+
+                        for (int g=rightStartIndex[j]; g<rightEndIndex[j]-1; g++){
+                                if (array[g] > array[g+1]) {
+                                        check = false;
+                                        count++;
+                                }
+                        }
+                        System.out.println("rechts sortiert: " + check);
+                        System.out.println("Fehlstellungen: " + count);
+                        System.out.println("i: " + j);
+                }
+
 
 
                 int shift = 0;
@@ -260,23 +342,12 @@ public class ParallelMergesort {
                 for (int i=0; i<ressources/2; i++) {
 
                         int[] tmpleft = new int[leftEndIndex[2*i]-leftStartIndex[2*i] + rightEndIndex[2*i] - rightStartIndex[2*i]+2];
-                        int[] tmpright;
-                        if (leftEndIndex[2*i+1] - leftStartIndex[2*i+1] + rightEndIndex[2*i+1]-rightStartIndex[2*i+1]+2>0){
-                                tmpright = new int[leftEndIndex[2*i+1] - leftStartIndex[2*i+1] + rightEndIndex[2*i+1]-rightStartIndex[2*i+1]+2];
-                        }
-                        else {
-                                tmpright = new int[0];
-                        }
+                        int[] tmpright = new int[leftEndIndex[2*i+1] - leftStartIndex[2*i+1] + rightEndIndex[2*i+1] - rightStartIndex[2*i+1]+2];
 
-                        if (leftEndIndex[2*i]-leftStartIndex[2*i]+1 > 0)
-                                System.arraycopy(array,leftStartIndex[2*i],tmpleft,0,leftEndIndex[2*i]-leftStartIndex[2*i]+1);
-                        if (rightEndIndex[2*i]-rightStartIndex[2*i]+1 > 0)
-                                System.arraycopy(array,rightStartIndex[2*i],tmpleft,leftEndIndex[2*i]-leftStartIndex[2*i]+1,rightEndIndex[2*i]-rightStartIndex[2*i]+1);
-
-                        if (leftEndIndex[2*i+1]-leftStartIndex[2*i+1]+1 > 0)
-                                System.arraycopy(array,leftStartIndex[2*i+1],tmpright,0,leftEndIndex[2*i+1]-leftStartIndex[2*i+1]+1);
-                        if (rightEndIndex[2*i+1]-rightStartIndex[2*i+1]+1 > 0)
-                                System.arraycopy(array,rightStartIndex[2*i+1],tmpright,leftEndIndex[2*i+1]-leftStartIndex[2*i+1]+1,rightEndIndex[2*i+1]-rightStartIndex[2*i+1]+1);
+                        System.arraycopy(array,leftStartIndex[2*i],tmpleft,0,leftEndIndex[2*i]-leftStartIndex[2*i]+1);
+                        System.arraycopy(array,rightStartIndex[2*i],tmpleft,leftEndIndex[2*i]-leftStartIndex[2*i]+1,rightEndIndex[2*i]-rightStartIndex[2*i]+1);
+                        System.arraycopy(array,leftStartIndex[2*i+1],tmpright,0,leftEndIndex[2*i+1]-leftStartIndex[2*i+1]+1);
+                        System.arraycopy(array,rightStartIndex[2*i+1],tmpright,leftEndIndex[2*i+1]-leftStartIndex[2*i+1]+1,rightEndIndex[2*i+1]-rightStartIndex[2*i+1]+1);
 
             /*
             System.out.println("TMPLEFT: " + Arrays.toString(tmpleft));
@@ -285,16 +356,26 @@ public class ParallelMergesort {
 
                         threads[2*i] = new SuperMergeAlgorithm(tmpleft, leftEndIndex[2*i]-leftStartIndex[2*i]+1);
                         threads[2*i+1] = new SuperMergeAlgorithm(tmpright,leftEndIndex[2*i+1]-leftStartIndex[2*i+1]+1);
+                        threads[2*i].start();
+                        threads[2*i+1].start();
                         threads[2*i].join();
                         threads[2*i+1].join();
 
+
+                        System.out.println(i);
+                        System.out.println("left: " + Arrays.toString(tmpleft));
+                        System.out.println("right: " + Arrays.toString(tmpright));
+
                         if (level > 1) {
                                 System.arraycopy(tmpleft,0,secondarray,shift,tmpleft.length);
-                                System.out.println(shift);
+
+                                /*System.out.println(shift);
                                 System.out.println(tmpleft.length);
                                 System.out.println(tmpright.length);
                                 System.out.println(Arrays.toString(tmpleft));
                                 System.out.println(Arrays.toString(tmpright));
+                                */
+
                                 System.arraycopy(tmpright,0,secondarray,shift+tmpleft.length,tmpright.length);
 
                                 shift += tmpleft.length+tmpright.length;

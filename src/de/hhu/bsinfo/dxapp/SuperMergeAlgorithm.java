@@ -6,9 +6,7 @@ public class SuperMergeAlgorithm extends Thread {
 
                 int length = array.length;
 
-                if (length == 1) {
-                        // DO NOTHING
-                } else {
+                if (length != 1) {
 
                         int indexLeft = 0;
                         int indexRight = pivotIndex;
@@ -40,7 +38,7 @@ public class SuperMergeAlgorithm extends Thread {
                                 finalIndex++;
                         }
 
-                        System.arraycopy(finalArray, 0, array, 0, length);
+                        System.arraycopy(finalArray, 0, array, 0, finalArray.length);
                 }
         }
 }
