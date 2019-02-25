@@ -121,14 +121,13 @@ public class MergeSort extends AbstractApplication {
         System.out.println("Größe der Splits: " + split);
         System.out.println("Größe der Splitdaten: " + sizeOfPartedData);
 
-        //IDList.set(i, new de.hhu.bsinfo.dxapp.data.ArrayList<ChunkByteArray>((Long id) -> {return new ChunkByteArray(64);},ChunkByteArray.class,chunkService));
-        int[] adressChunkSize = new int[onlineWorkerNodeIDs.size()];
+        int[] addressChunkSize = new int[onlineWorkerNodeIDs.size()];
 
         // Write Chunk Ids to Matrix
         Iterator dataIterator = inputData.iterator();
         for (int i=0; i<onlineWorkerNodeIDs.size(); i++){
             long[] tmpIds;
-            long[] tmpAdressChunkId = new long[1];
+            long[] tmpAddressChunkId = new long[1];
             long[] tmpSizeChunkId = new long[1];
 
             // Eventuell Idee verbessern
@@ -150,9 +149,9 @@ public class MergeSort extends AbstractApplication {
             }
 
             // Create, register AddressChunk
-            chunkService.create().create(onlineNodeIDs.get(i), tmpAdressChunkId, 1, GLOBAL_CHUNK_SIZE*tmpIds.length);
-            editChunkArray(tmpIds, tmpAdressChunkId[0], chunkService);
-            nameService.register(tmpAdressChunkId[0], "AC" + i);
+            chunkService.create().create(onlineNodeIDs.get(i), tmpAddressChunkId, 1, GLOBAL_CHUNK_SIZE*tmpIds.length);
+            editChunkArray(tmpIds, tmpAddressChunkId[0], chunkService);
+            nameService.register(tmpAddressChunkId[0], "AC" + i);
 
             // Size of AddressChunk
             chunkService.create().create(onlineNodeIDs.get(i), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
@@ -164,29 +163,13 @@ public class MergeSort extends AbstractApplication {
             editChunkInt(2, tmpSizeChunkId[0], 1, chunkService);
             nameService.register(tmpSizeChunkId[0], "GT" + i);
 
-            adressChunkSize[i]=tmpIds.length;
+            addressChunkSize[i]=tmpIds.length;
         }
-
-        for (int i=0; i<onlineWorkerNodeIDs.size(); i++){
-
-            long chunkID = nameService.getChunkID("AC" + i, 1000);
-            long[] tmp = getLongArray(chunkID, adressChunkSize[i], chunkService);
-
-            System.out.println(i + ". Adressliste:");
-            System.out.println(Arrays.toString(getLongArray(nameService.getChunkID("AC" + i, 1000), adressChunkSize[i], chunkService)));
-            System.out.println("Länge: " +tmp.length);
-        }
-
-
-        System.out.println(Arrays.toString(getLongArray(nameService.getChunkID("AC0", 100), getIntData(nameService.getChunkID("SAC0", 100), chunkService),chunkService)));
 
         SortTask sortTask = new SortTask();
-        System.out.println(onlineWorkerNodeIDs.toString());
-
         TaskScript sortSkript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Sort Task", sortTask);
         masterSlaveComputeService.submitTaskScript(sortSkript);
         System.out.println("Führe sort-Task aus!");
-
 
 
         int goThrough = onlineWorkerNodeIDs.size();
@@ -205,55 +188,6 @@ public class MergeSort extends AbstractApplication {
             masterSlaveComputeService.submitTaskScript(exportScript);
             System.out.println("Führe export-Task aus!");
         }
-
-
-
-
-
-
-
-
-        //de.hhu.bsinfo.dxapp.data.ArrayList<ChunkByteArray> chunkList = new de.hhu.bsinfo.dxapp.data.ArrayList<ChunkByteArray>((Long id) -> {return new ChunkByteArray(64);},ChunkByteArray.class,chunkService);
-
-
-/*
-        ArrayList<MasterNodeEntry> arrayList = masterSlaveComputeService.getMasters();
-
-        for (MasterNodeEntry tmp: arrayList){
-            System.out.println("Masterknoten: " + NodeID.toHexString(tmp.getNodeId()));
-        }
-
-        RessourceTask ressourceTask = new RessourceTask();
-        TestTask testTask = new TestTask(0);
-
-        TaskScript ressourceSkript = new TaskScript((short) 0, (short) 10, "ressource Task", ressourceTask, testTask);
-
-
-        System.out.println("Jetzt Task abfeuern");
-
-        TaskScriptState taskScriptState =  masterSlaveComputeService.submitTaskScript(ressourceSkript);
-        //taskScriptState.registerTaskListener();
-
-        System.out.println("Startet: " + taskScriptState.hasTaskStarted());
-        System.out.println("Beendet: " + taskScriptState.hasTaskCompleted());
-
-        System.out.println(ressourceTask.getRessources());
-
-        */
-
-
-        //de.hhu.bsinfo.dxapp.data.ArrayList<ChunkByteArray> chunkList = new de.hhu.bsinfo.dxapp.data.ArrayList<ChunkByteArray>((Long id) -> {return new ChunkByteArray(64);},ChunkByteArray.class,chunkService);
-        //tmptest.add()
-        //Ressource[] resources = new Ressource[onlineNodeIDs.size()-1];
-
-
-
-        //de.hhu.bsinfo.dxapp.data.ArrayList<ChunkByteArray> tmptest = new de.hhu.bsinfo.dxapp.data.ArrayList<ChunkByteArray>((Long id) -> {return new ChunkByteArray(64);},ChunkByteArray.class,chunkService);
-
-
-
-
-
     }
 
     @Override

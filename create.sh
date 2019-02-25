@@ -1,0 +1,1 @@
+./build.sh && cd  /home/jusch/IdeaProjects/dxram/ && ./build.sh && cd /home/jusch/Software/Programme/dxapps/ && ./build.sh dxa-helloworld && cd /home/jusch/IdeaProjects/dxa-mergesort && ./build.sh && cp /home/jusch/IdeaProjects/dxa-mergesort/build/libs/dxa-mergesort.jar /home/jusch/dxram/dxapp/dxa-mergesort.jar && cp -r /home/jusch/IdeaProjects/data /home/jusch/dxram/dxapp
