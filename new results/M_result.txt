@@ -1,0 +1,26 @@
+Benchmark                                                                Mode  Cnt          Score        Error  Units
+
+JNMergsortBenchmark.testMethod_NormalMergesort                           avgt   25  156127167,789 ± 700590,626  ns/op
+Gesamt:
+
+NaiveParallelMergesortBenchmark.testMethod_partialParallelMergeOneCore   avgt   25    2303737,828 ±  48046,200  ns/op
+NaiveParallelMergesortBenchmark.testMethod_partialParallelMergeTwoCores  avgt   25    1523763,573 ±  12373,741  ns/op
+NaiveParallelMergesortBenchmark.testMethod_partialParallelSort           avgt   25   29915139,873 ± 376160,991  ns/op
+Gesamt:
+
+Überschneidung 100%:
+BalancedMergesortBenchmark.testMethodBalancedParallelMergesortMerge4Cores    avgt   25  75495042,994 ± 4398072,684  ns/op
+BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortMerges2Halfs  avgt   25  75022194,975 ± 5092107,775  ns/op
+BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortSizeEquals4   avgt   25   3270236,822 ±   72801,826  ns/op
+Gesamt:
+
+Überschneidung 80%:
+BalancedMergesortBenchmark.testMethodBalancedParallelMergesortMerge4Cores    avgt   25  68826024,773 ± 4059638,743  ns/op
+BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortMerges2Halfs  avgt   25  69939405,571 ± 6709731,755  ns/op
+BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortSizeEquals4   avgt   25   3309604,466 ±   80865,869  ns/op
+Gesamt:
+
+Überschneidung 60%:
+BalancedMergesortBenchmark.testMethodBalancedParallelMergesortMerge4Cores    avgt   25  69558641,979 ± 3929912,076  ns/op
+BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortMerges2Halfs  avgt   25  67671947,376 ± 3900540,312  ns/op
+BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortSizeEquals4   avgt   25   3331294,478 ±   96966,076  ns/op

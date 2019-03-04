@@ -1,0 +1,93 @@
+# JMH version: 1.21
+# VM version: JDK 10.0.2, OpenJDK 64-Bit Server VM, 10.0.2+13-Ubuntu-1ubuntu0.18.04.4
+# VM invoker: /usr/lib/jvm/java-11-openjdk-amd64/bin/java
+# VM options: <none>
+# Warmup: 5 iterations, 3 s each
+# Measurement: 5 iterations, 5 s each
+# Timeout: 10 min per iteration
+# Threads: 4 threads, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.sample.BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortMerges2Halfs
+
+# Run progress: 0,00% complete, ETA 00:03:20
+# Fork: 1 of 5
+# Warmup Iteration   1: 12890,618 ±(99.9%) 3200,667 ns/op
+# Warmup Iteration   2: 7644,212 ±(99.9%) 960,580 ns/op
+# Warmup Iteration   3: 7543,493 ±(99.9%) 1036,983 ns/op
+# Warmup Iteration   4: 7534,913 ±(99.9%) 453,209 ns/op
+# Warmup Iteration   5: 7486,369 ±(99.9%) 544,866 ns/op
+Iteration   1: 7518,674 ±(99.9%) 493,338 ns/op
+Iteration   2: 7521,334 ±(99.9%) 693,353 ns/op
+Iteration   3: 7575,141 ±(99.9%) 359,281 ns/op
+Iteration   4: 7503,770 ±(99.9%) 734,677 ns/op
+Iteration   5: 7511,864 ±(99.9%) 196,771 ns/op
+
+# Run progress: 20,00% complete, ETA 00:02:42
+# Fork: 2 of 5
+# Warmup Iteration   1: 38656,164 ±(99.9%) 9449,203 ns/op
+# Warmup Iteration   2: 7535,473 ±(99.9%) 462,672 ns/op
+# Warmup Iteration   3: 7423,757 ±(99.9%) 1658,188 ns/op
+# Warmup Iteration   4: 7463,949 ±(99.9%) 1421,760 ns/op
+# Warmup Iteration   5: 7373,282 ±(99.9%) 1107,077 ns/op
+Iteration   1: 7312,297 ±(99.9%) 756,342 ns/op
+Iteration   2: 7415,981 ±(99.9%) 271,771 ns/op
+Iteration   3: 7400,089 ±(99.9%) 634,557 ns/op
+Iteration   4: 7477,143 ±(99.9%) 414,467 ns/op
+Iteration   5: 7361,994 ±(99.9%) 273,877 ns/op
+
+# Run progress: 40,00% complete, ETA 00:02:01
+# Fork: 3 of 5
+# Warmup Iteration   1: 8823,202 ±(99.9%) 2686,449 ns/op
+# Warmup Iteration   2: 7602,368 ±(99.9%) 745,506 ns/op
+# Warmup Iteration   3: 7455,633 ±(99.9%) 439,466 ns/op
+# Warmup Iteration   4: 7646,978 ±(99.9%) 1498,861 ns/op
+# Warmup Iteration   5: 7672,753 ±(99.9%) 777,172 ns/op
+Iteration   1: 7419,344 ±(99.9%) 287,264 ns/op
+Iteration   2: 7469,516 ±(99.9%) 382,634 ns/op
+Iteration   3: 7482,364 ±(99.9%) 735,221 ns/op
+Iteration   4: 7607,903 ±(99.9%) 604,542 ns/op
+Iteration   5: 7510,838 ±(99.9%) 154,056 ns/op
+
+# Run progress: 60,00% complete, ETA 00:01:21
+# Fork: 4 of 5
+# Warmup Iteration   1: 11283,483 ±(99.9%) 2561,037 ns/op
+# Warmup Iteration   2: 7268,207 ±(99.9%) 654,118 ns/op
+# Warmup Iteration   3: 7663,002 ±(99.9%) 1776,079 ns/op
+# Warmup Iteration   4: 7642,667 ±(99.9%) 2427,145 ns/op
+# Warmup Iteration   5: 8070,131 ±(99.9%) 2402,157 ns/op
+Iteration   1: 7401,878 ±(99.9%) 926,512 ns/op
+Iteration   2: 7384,779 ±(99.9%) 847,527 ns/op
+Iteration   3: 7296,822 ±(99.9%) 844,652 ns/op
+Iteration   4: 7403,945 ±(99.9%) 943,000 ns/op
+Iteration   5: 7267,878 ±(99.9%) 782,468 ns/op
+
+# Run progress: 80,00% complete, ETA 00:00:40
+# Fork: 5 of 5
+# Warmup Iteration   1: 31073,360 ±(99.9%) 5540,886 ns/op
+# Warmup Iteration   2: 7707,236 ±(99.9%) 467,696 ns/op
+# Warmup Iteration   3: 7385,807 ±(99.9%) 776,299 ns/op
+# Warmup Iteration   4: 7535,883 ±(99.9%) 577,858 ns/op
+# Warmup Iteration   5: 7581,745 ±(99.9%) 883,606 ns/op
+Iteration   1: 7495,269 ±(99.9%) 1140,095 ns/op
+Iteration   2: 7432,924 ±(99.9%) 785,074 ns/op
+Iteration   3: 7472,830 ±(99.9%) 1301,389 ns/op
+Iteration   4: 7461,585 ±(99.9%) 1958,066 ns/op
+Iteration   5: 7324,546 ±(99.9%) 1105,951 ns/op
+
+
+Result "org.sample.BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortMerges2Halfs":
+  7441,228 ±(99.9%) 64,222 ns/op [Average]
+  (min, avg, max) = (7267,878, 7441,228, 7607,903), stdev = 85,735
+  CI (99.9%): [7377,006, 7505,451] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:03:22
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+Benchmark                                                                    Mode  Cnt     Score    Error  Units
+BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortMerges2Halfs  avgt   25  7441,228 ± 64,222  ns/op

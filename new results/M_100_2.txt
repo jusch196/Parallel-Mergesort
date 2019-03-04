@@ -1,0 +1,93 @@
+# JMH version: 1.21
+# VM version: JDK 10.0.2, OpenJDK 64-Bit Server VM, 10.0.2+13-Ubuntu-1ubuntu0.18.04.4
+# VM invoker: /usr/lib/jvm/java-11-openjdk-amd64/bin/java
+# VM options: <none>
+# Warmup: 5 iterations, 3 s each
+# Measurement: 5 iterations, 5 s each
+# Timeout: 10 min per iteration
+# Threads: 4 threads, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: org.sample.BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortMerges2Halfs
+
+# Run progress: 0,00% complete, ETA 00:03:20
+# Fork: 1 of 5
+# Warmup Iteration   1: 72611262,000 ±(99.9%) 108884339,967 ns/op
+# Warmup Iteration   2: 111135927,329 ±(99.9%) 94977112,552 ns/op
+# Warmup Iteration   3: 102042644,138 ±(99.9%) 151450344,434 ns/op
+# Warmup Iteration   4: 86195623,179 ±(99.9%) 128307290,106 ns/op
+# Warmup Iteration   5: 68145415,518 ±(99.9%) 65865746,026 ns/op
+Iteration   1: 75520309,064 ±(99.9%) 46260791,557 ns/op
+Iteration   2: 73105615,363 ±(99.9%) 31127997,114 ns/op
+Iteration   3: 77497418,887 ±(99.9%) 28550512,484 ns/op
+Iteration   4: 72819090,515 ±(99.9%) 45366953,618 ns/op
+Iteration   5: 65573475,867 ±(99.9%) 15222092,487 ns/op
+
+# Run progress: 20,00% complete, ETA 00:03:07
+# Fork: 2 of 5
+# Warmup Iteration   1: 71141964,250 ±(99.9%) 272444681,544 ns/op
+# Warmup Iteration   2: 91727935,726 ±(99.9%) 27568072,295 ns/op
+# Warmup Iteration   3: 81594974,100 ±(99.9%) 146361175,994 ns/op
+# Warmup Iteration   4: 93942915,352 ±(99.9%) 68867817,116 ns/op
+# Warmup Iteration   5: 84535671,900 ±(99.9%) 39374077,028 ns/op
+Iteration   1: 65602927,612 ±(99.9%) 33895241,113 ns/op
+Iteration   2: 70649410,635 ±(99.9%) 60112557,520 ns/op
+Iteration   3: 73053714,509 ±(99.9%) 22829935,545 ns/op
+Iteration   4: 80919559,564 ±(99.9%) 28662666,995 ns/op
+Iteration   5: 65647760,725 ±(99.9%) 85280314,191 ns/op
+
+# Run progress: 40,00% complete, ETA 00:02:17
+# Fork: 3 of 5
+# Warmup Iteration   1: 126998054,750 ±(99.9%) 188744199,983 ns/op
+# Warmup Iteration   2: 140474671,458 ±(99.9%) 129774069,124 ns/op
+# Warmup Iteration   3: 82961580,250 ±(99.9%) 38734391,348 ns/op
+# Warmup Iteration   4: 103329049,054 ±(99.9%) 85588249,091 ns/op
+# Warmup Iteration   5: 85054942,769 ±(99.9%) 113310778,443 ns/op
+Iteration   1: 66572549,465 ±(99.9%) 69859596,188 ns/op
+Iteration   2: 77577231,839 ±(99.9%) 9849009,712 ns/op
+Iteration   3: 80747937,310 ±(99.9%) 41831927,090 ns/op
+Iteration   4: 92691121,458 ±(99.9%) 86810064,629 ns/op
+Iteration   5: 81233988,340 ±(99.9%) 28649495,880 ns/op
+
+# Run progress: 60,00% complete, ETA 00:01:31
+# Fork: 4 of 5
+# Warmup Iteration   1: 58085395,000 ±(99.9%) 264281844,324 ns/op
+# Warmup Iteration   2: 150341791,125 ±(99.9%) 106260026,971 ns/op
+# Warmup Iteration   3: 106756716,849 ±(99.9%) 71505101,748 ns/op
+# Warmup Iteration   4: 80435228,906 ±(99.9%) 47954893,194 ns/op
+# Warmup Iteration   5: 69428706,622 ±(99.9%) 73335125,312 ns/op
+Iteration   1: 77704800,764 ±(99.9%) 48671533,640 ns/op
+Iteration   2: 84936155,295 ±(99.9%) 59942008,924 ns/op
+Iteration   3: 75830525,303 ±(99.9%) 49322936,787 ns/op
+Iteration   4: 68748422,747 ±(99.9%) 49469075,655 ns/op
+Iteration   5: 77680152,582 ±(99.9%) 23852684,767 ns/op
+
+# Run progress: 80,00% complete, ETA 00:00:45
+# Fork: 5 of 5
+# Warmup Iteration   1: 58212141,250 ±(99.9%) 65209772,698 ns/op
+# Warmup Iteration   2: 110205892,089 ±(99.9%) 91396156,437 ns/op
+# Warmup Iteration   3: 80309521,817 ±(99.9%) 101561760,134 ns/op
+# Warmup Iteration   4: 82600538,250 ±(99.9%) 164080567,527 ns/op
+# Warmup Iteration   5: 84697883,895 ±(99.9%) 106470140,811 ns/op
+Iteration   1: 77422519,398 ±(99.9%) 43710917,107 ns/op
+Iteration   2: 77558923,214 ±(99.9%) 56083594,832 ns/op
+Iteration   3: 79902749,693 ±(99.9%) 35793719,663 ns/op
+Iteration   4: 64439212,169 ±(99.9%) 84504853,691 ns/op
+Iteration   5: 72119302,056 ±(99.9%) 43253905,351 ns/op
+
+
+Result "org.sample.BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortMerges2Halfs":
+  75022194,975 ±(99.9%) 5092107,775 ns/op [Average]
+  (min, avg, max) = (64439212,169, 75022194,975, 92691121,458), stdev = 6797818,193
+  CI (99.9%): [69930087,200, 80114302,750] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:03:49
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+Benchmark                                                                    Mode  Cnt         Score         Error  Units
+BalancedMergesortBenchmark.testMethod_BalancedParallelMergesortMerges2Halfs  avgt   25  75022194,975 ± 5092107,775  ns/op
