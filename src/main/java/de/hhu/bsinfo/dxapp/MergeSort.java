@@ -9,10 +9,10 @@ import de.hhu.bsinfo.dxram.generated.BuildConfig;
 import de.hhu.bsinfo.dxram.ms.MasterNodeEntry;
 import de.hhu.bsinfo.dxram.ms.MasterSlaveComputeService;
 import de.hhu.bsinfo.dxram.ms.TaskScript;
-import de.hhu.bsinfo.dxram.ms.tasks.mergesort.ExportTask;
-import de.hhu.bsinfo.dxram.ms.tasks.mergesort.MergeTask;
-import de.hhu.bsinfo.dxram.ms.tasks.mergesort.RessourceTask;
-import de.hhu.bsinfo.dxram.ms.tasks.mergesort.SortTask;
+import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.ExportTask;
+import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.MergeTask;
+import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.ResourceTask;
+import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.SortTask;
 import de.hhu.bsinfo.dxram.nameservice.NameserviceService;
 import de.hhu.bsinfo.dxutils.NodeID;
 
@@ -31,8 +31,6 @@ import java.util.*;
 
 public class MergeSort extends AbstractApplication {
 
-    private static short GLOBAL_PEER_MINIMUM = 1;
-    private static short GLOBAL_PEER_MAXIMUM = 10;
     private final static int GLOBAL_CHUNK_SIZE = 64;
 
     private static int writeOutSize = 1;
@@ -73,19 +71,20 @@ public class MergeSort extends AbstractApplication {
         }
 
         // Find online nodes and add them to the IDlist
-        for (int i=1; onlineNodeIDsIterator.hasNext(); i++){
+        while (onlineNodeIDsIterator.hasNext()){
             Short tmp = onlineNodeIDsIterator.next();
             if (bootService.getNodeRole(tmp).toString().equals("peer") && !masterNodeIDs.contains(tmp))
                 onlineWorkerNodeIDs.add(tmp);
         }
-
         // Read data from file given in argument p_args[0] to inputData
         String filepath = "dxapp/data/" + p_args[0];
         String seperator = ", ";
         List<Integer> inputData = readData(filepath, seperator);
 
-        if (p_args.length == 4){
-            writeOutSize = Integer.parseInt(p_args[3]);
+        if (p_args.length == 2){
+            writeOutSize = Integer.parseInt(p_args[1]);
+            if (writeOutSize < 1)
+                throw new IllegalArgumentException("Exportparameter has to be greater than 0");
         }
 
         long[] tmpSizeChunkId = new long[1];
@@ -94,21 +93,19 @@ public class MergeSort extends AbstractApplication {
         nameService.register(tmpSizeChunkId[0], "WO");
 
 
-        GLOBAL_PEER_MINIMUM = Short.parseShort(p_args[1]);
-        GLOBAL_PEER_MAXIMUM = Short.parseShort(p_args[2]);
-
-        System.out.println(masterSlaveComputeService.getComputeRole().toString());
+        short GLOBAL_PEER_MINIMUM = (short) onlineWorkerNodeIDs.size();
+        short GLOBAL_PEER_MAXIMUM = (short) onlineWorkerNodeIDs.size();
 
         // Get resources (number of available cores)
-        RessourceTask ressourceTask = new RessourceTask();
-        TaskScript ressourceSkript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "resource Task", ressourceTask);
-        masterSlaveComputeService.submitTaskScript(ressourceSkript);
+        ResourceTask resourceTask = new ResourceTask();
+        TaskScript resourceScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "resource Task", resourceTask);
+        masterSlaveComputeService.submitTaskScript(resourceScript);
 
         // Save data of the resource-Task
         int[] resources = new int[onlineWorkerNodeIDs.size()];
         int split = 0;
         for (int i=0; i<onlineWorkerNodeIDs.size();i++){
-            long chunkID= nameService.getChunkID("RC-" +i,100);
+            long chunkID= nameService.getChunkID("RC" +i,100);
             resources[i] = getIntData(chunkID, chunkService);
             split += resources[i];
         }
@@ -143,7 +140,7 @@ public class MergeSort extends AbstractApplication {
             }
 
             // Create, register AddressChunk
-            chunkService.create().create(onlineNodeIDs.get(i), tmpAddressChunkId, 1, GLOBAL_CHUNK_SIZE*tmpIds.length);
+            chunkService.create().create(getShortData(nameService.getChunkID("SID"+i, 100),chunkService), tmpAddressChunkId, 1, GLOBAL_CHUNK_SIZE*tmpIds.length);
             editChunkLongArray(tmpIds, tmpAddressChunkId[0], chunkService);
             nameService.register(tmpAddressChunkId[0], "AC" + i);
 
@@ -161,8 +158,8 @@ public class MergeSort extends AbstractApplication {
         }
 
         SortTask sortTask = new SortTask();
-        TaskScript sortSkript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Sort Task", sortTask);
-        masterSlaveComputeService.submitTaskScript(sortSkript);
+        TaskScript sortScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Sort Task", sortTask);
+        masterSlaveComputeService.submitTaskScript(sortScript);
 
         int goThrough = onlineWorkerNodeIDs.size();
 
@@ -239,12 +236,29 @@ public class MergeSort extends AbstractApplication {
     }
 
     /**
-     * Reads the values of a file into storage
+     * Get the shortvalue of a chunk
+     * @param chunkId
+     *          ID of the chunk
+     * @param chunkService
+     *          Chunkservice to manage the operation
+     * @return
+     *      Shortvalue of the chunk
+     */
+    private short getShortData(long chunkId, ChunkService chunkService){
+        ChunkByteArray chunk = new ChunkByteArray(chunkId, GLOBAL_CHUNK_SIZE);
+        chunkService.get().get(chunk);
+        byte[] byteData = chunk.getData();
+        return ByteBuffer.wrap(byteData).getShort();
+    }
+
+    /**
+     * Reads the values of a file into DXRAM-storage
      * @param filepath
      *          Defines the filepath
      * @param seperator
      *          Defines the seperator in example ", "
      * @return
+     *          Returns a list containing the values
      */
     private List<Integer> readData(String filepath, String seperator){
         Scanner scanner = null;
@@ -255,7 +269,7 @@ public class MergeSort extends AbstractApplication {
         }
 
         scanner.useDelimiter(seperator);
-        List<Integer> list = new ArrayList<Integer>();
+        List<Integer> list = new ArrayList<>();
 
         while (scanner.hasNext()) {
             list.add(scanner.nextInt());
