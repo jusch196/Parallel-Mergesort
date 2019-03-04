@@ -19,7 +19,6 @@ import de.hhu.bsinfo.dxutils.NodeID;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.LongBuffer;
 import java.util.*;
 
@@ -32,11 +31,11 @@ import java.util.*;
 
 public class MergeSort extends AbstractApplication {
 
-    private final static short GLOBAL_PEER_MINIMUM = 1;
-    private final static short GLOBAL_PEER_MAXIMUM = 10;
+    private static short GLOBAL_PEER_MINIMUM = 1;
+    private static short GLOBAL_PEER_MAXIMUM = 10;
     private final static int GLOBAL_CHUNK_SIZE = 64;
 
-    private static boolean WRITE_OUT_FLAG = false;
+    private static int writeOutSize = 1;
 
     @Override
     public DXRAMVersion getBuiltAgainstVersion() {
@@ -63,27 +62,19 @@ public class MergeSort extends AbstractApplication {
 
         // Put your application code running on the DXRAM node/peer here
 
-        // Get all IDs of the online nodes get MS-role
         List<Short> onlineNodeIDs = bootService.getOnlineNodeIDs();
         List<Short> onlineWorkerNodeIDs = new ArrayList<>();
         Iterator<Short> onlineNodeIDsIterator = onlineNodeIDs.iterator();
 
-        // Get all IDs of the masternodes
         ArrayList<MasterNodeEntry> masterNodes = masterSlaveComputeService.getMasters();
         ArrayList<Short> masterNodeIDs = new ArrayList<>();
         for (MasterNodeEntry tmp: masterNodes){
             masterNodeIDs.add(tmp.getNodeId());
         }
 
-        // Print online nodes and add them to the IDlist
-        System.out.println("Liste vorhandener NodeIDs:");
+        // Find online nodes and add them to the IDlist
         for (int i=1; onlineNodeIDsIterator.hasNext(); i++){
             Short tmp = onlineNodeIDsIterator.next();
-            if (masterNodeIDs.contains(tmp))
-                System.out.println(i + ". " + NodeID.toHexString(tmp) + " - " + bootService.getNodeRole(tmp).toString() +  " - masternode");
-            else
-                System.out.println(i + ". " + NodeID.toHexString(tmp) + " - " + bootService.getNodeRole(tmp).toString() );
-
             if (bootService.getNodeRole(tmp).toString().equals("peer") && !masterNodeIDs.contains(tmp))
                 onlineWorkerNodeIDs.add(tmp);
         }
@@ -91,11 +82,20 @@ public class MergeSort extends AbstractApplication {
         // Read data from file given in argument p_args[0] to inputData
         String filepath = "dxapp/data/" + p_args[0];
         String seperator = ", ";
-        System.out.println("Working Directory = " + System.getProperty("user.dir"));
-        System.out.println("Filepath = " + filepath);
         List<Integer> inputData = readData(filepath, seperator);
 
-        WRITE_OUT_FLAG = (p_args[1].equals("-e"));
+        if (p_args.length == 5){
+            writeOutSize = Integer.parseInt(p_args[4]);
+        }
+
+        long[] tmpSizeChunkId = new long[1];
+        chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
+        editChunkInt(writeOutSize, tmpSizeChunkId[0], 1, chunkService);
+        nameService.register(tmpSizeChunkId[0], "WO");
+
+
+        GLOBAL_PEER_MINIMUM = Short.parseShort(p_args[1]);
+        GLOBAL_PEER_MAXIMUM = Short.parseShort(p_args[2]);
 
         System.out.println(masterSlaveComputeService.getComputeRole().toString());
 
@@ -103,7 +103,6 @@ public class MergeSort extends AbstractApplication {
         RessourceTask ressourceTask = new RessourceTask();
         TaskScript ressourceSkript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "resource Task", ressourceTask);
         masterSlaveComputeService.submitTaskScript(ressourceSkript);
-        System.out.println("Führe resource-Task aus!");
 
         // Save data of the resource-Task
         int[] resources = new int[onlineWorkerNodeIDs.size()];
@@ -117,10 +116,6 @@ public class MergeSort extends AbstractApplication {
         int sizeOfPartedData = inputData.size() / split;
         int overhead = inputData.size() % split;
 
-        System.out.println("Größe der InputDate: " + inputData.size());
-        System.out.println("Größe der Splits: " + split);
-        System.out.println("Größe der Splitdaten: " + sizeOfPartedData);
-
         int[] addressChunkSize = new int[onlineWorkerNodeIDs.size()];
 
         // Write Chunk Ids to Matrix
@@ -128,9 +123,8 @@ public class MergeSort extends AbstractApplication {
         for (int i=0; i<onlineWorkerNodeIDs.size(); i++){
             long[] tmpIds;
             long[] tmpAddressChunkId = new long[1];
-            long[] tmpSizeChunkId = new long[1];
+            tmpSizeChunkId = new long[1];
 
-            // Eventuell Idee verbessern
             if (overhead!= 0){
                 if (overhead >= resources[i]){
                     tmpIds = new long[resources[i]*(sizeOfPartedData+1)];
@@ -150,7 +144,7 @@ public class MergeSort extends AbstractApplication {
 
             // Create, register AddressChunk
             chunkService.create().create(onlineNodeIDs.get(i), tmpAddressChunkId, 1, GLOBAL_CHUNK_SIZE*tmpIds.length);
-            editChunkArray(tmpIds, tmpAddressChunkId[0], chunkService);
+            editChunkLongArray(tmpIds, tmpAddressChunkId[0], chunkService);
             nameService.register(tmpAddressChunkId[0], "AC" + i);
 
             // Size of AddressChunk
@@ -169,8 +163,6 @@ public class MergeSort extends AbstractApplication {
         SortTask sortTask = new SortTask();
         TaskScript sortSkript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Sort Task", sortTask);
         masterSlaveComputeService.submitTaskScript(sortSkript);
-        System.out.println("Führe sort-Task aus!");
-
 
         int goThrough = onlineWorkerNodeIDs.size();
 
@@ -178,16 +170,12 @@ public class MergeSort extends AbstractApplication {
         TaskScript mergeScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Merge Task", mergeTask);
         while (goThrough > 1){
             masterSlaveComputeService.submitTaskScript(mergeScript);
-            System.out.println("Führe merge-Task aus!");
             goThrough /=2;
         }
 
-        if (WRITE_OUT_FLAG){
-            ExportTask exportTask = new ExportTask();
-            TaskScript exportScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Export Task", exportTask);
-            masterSlaveComputeService.submitTaskScript(exportScript);
-            System.out.println("Führe export-Task aus!");
-        }
+        ExportTask exportTask = new ExportTask();
+        TaskScript exportScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Export Task", exportTask);
+        masterSlaveComputeService.submitTaskScript(exportScript);
     }
 
     @Override
@@ -197,6 +185,18 @@ public class MergeSort extends AbstractApplication {
         // must be execute asynchronously
     }
 
+    /**
+     * Edits the integervalue of a chunk
+     *
+     * @param value
+     *          Integervalue to put
+     * @param chunkId
+     *          ChunkID of the editable chunk
+     * @param size
+     *          Size definines how many 64-BIT-integer should be written
+     * @param chunkService
+     *          Chunkservice to manage the operation
+     */
     private void editChunkInt(int value, long chunkId, int size , ChunkService chunkService){
         ByteBuffer byteBuffer = ByteBuffer.allocate(size*GLOBAL_CHUNK_SIZE);
         byteBuffer.putInt(value);
@@ -204,7 +204,17 @@ public class MergeSort extends AbstractApplication {
         chunkService.put().put(chunkByteArray);
     }
 
-    private void editChunkArray (long[] array, long chunkId, ChunkService chunkService){
+    /**
+     * Edits the longarray of a chunk
+     *
+     * @param array
+     *          longarray to put
+     * @param chunkId
+     *          ChunkID of the editable chunk
+     * @param chunkService
+     *          Chunkservice to manage the operation
+     */
+    private void editChunkLongArray(long[] array, long chunkId, ChunkService chunkService){
         ByteBuffer byteBuffer = ByteBuffer.allocate(array.length*GLOBAL_CHUNK_SIZE);
         LongBuffer longBuffer = byteBuffer.asLongBuffer();
         longBuffer.put(array);
@@ -212,21 +222,15 @@ public class MergeSort extends AbstractApplication {
         chunkService.put().put(chunkByteArray);
     }
 
-    private long[] getLongArray(long chunkId, int size, ChunkService chunkService) {
-        ChunkByteArray testChunk = new ChunkByteArray(chunkId, GLOBAL_CHUNK_SIZE*size);
-        chunkService.get().get(testChunk);
-        byte[] byteData = testChunk.getData();
-        LongBuffer longBuffer = ByteBuffer.wrap(byteData)
-                .order(ByteOrder.BIG_ENDIAN)
-                .asLongBuffer();
-
-        long[] longArray = new long[size];
-        longBuffer.get(longArray);
-
-        return longArray;
-
-    }
-
+    /**
+     * Get the integervalue of a chunk
+     * @param chunkId
+     *          ID of the chunk
+     * @param chunkService
+     *          Chunkservice to manage the operation
+     * @return
+     *      Integervalue of the chunk
+     */
     private int getIntData(long chunkId, ChunkService chunkService){
         ChunkByteArray chunk = new ChunkByteArray(chunkId, GLOBAL_CHUNK_SIZE);
         chunkService.get().get(chunk);
@@ -234,6 +238,14 @@ public class MergeSort extends AbstractApplication {
         return ByteBuffer.wrap(byteData).getInt();
     }
 
+    /**
+     * Reads the values of a file into storage
+     * @param filepath
+     *          Defines the filepath
+     * @param seperator
+     *          Defines the seperator in example ", "
+     * @return
+     */
     private List<Integer> readData(String filepath, String seperator){
         Scanner scanner = null;
         try {
