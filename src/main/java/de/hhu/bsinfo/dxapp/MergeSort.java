@@ -84,8 +84,8 @@ public class MergeSort extends AbstractApplication {
         String seperator = ", ";
         List<Integer> inputData = readData(filepath, seperator);
 
-        if (p_args.length == 5){
-            writeOutSize = Integer.parseInt(p_args[4]);
+        if (p_args.length == 4){
+            writeOutSize = Integer.parseInt(p_args[3]);
         }
 
         long[] tmpSizeChunkId = new long[1];
