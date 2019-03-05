@@ -9,6 +9,7 @@ import de.hhu.bsinfo.dxram.generated.BuildConfig;
 import de.hhu.bsinfo.dxram.ms.MasterNodeEntry;
 import de.hhu.bsinfo.dxram.ms.MasterSlaveComputeService;
 import de.hhu.bsinfo.dxram.ms.TaskScript;
+import de.hhu.bsinfo.dxram.ms.TaskScriptState;
 import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.*;
 import de.hhu.bsinfo.dxram.nameservice.NameserviceService;
 import de.hhu.bsinfo.dxutils.NodeID;
@@ -25,7 +26,6 @@ import java.util.*;
  *
  * @author Julian Schacht, julian-morten.schacht@uni-duesseldorf.de, 15.03.2019
  */
-
 public class MergeSort extends AbstractApplication {
 
     private final static int GLOBAL_CHUNK_SIZE = 64;
@@ -78,6 +78,8 @@ public class MergeSort extends AbstractApplication {
         String seperator = ", ";
         List<Integer> inputData = readData(filepath, seperator);
 
+        System.out.println("Einlesen abgeschlossen");
+
         if (p_args.length == 2){
             writeOutSize = Integer.parseInt(p_args[1]);
             if (writeOutSize < 1)
@@ -88,7 +90,6 @@ public class MergeSort extends AbstractApplication {
         chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
         editChunkInt(writeOutSize, tmpSizeChunkId[0], 1, chunkService);
         nameService.register(tmpSizeChunkId[0], "WO");
-
 
         short GLOBAL_PEER_MINIMUM = (short) onlineWorkerNodeIDs.size();
         short GLOBAL_PEER_MAXIMUM = (short) onlineWorkerNodeIDs.size();
@@ -131,23 +132,29 @@ public class MergeSort extends AbstractApplication {
                 tmpIds = new long[resources[i]*sizeOfPartedData];
             }
 
-            chunkService.create().create(onlineWorkerNodeIDs.get(i), tmpIds, tmpIds.length, GLOBAL_CHUNK_SIZE);
+            short actualNodeID = getShortData(nameService.getChunkID("SID"+i, 100), chunkService);
+
+            chunkService.create().create(actualNodeID, tmpIds, tmpIds.length, GLOBAL_CHUNK_SIZE);
             for (long tmpId : tmpIds) {
                 editChunkInt((Integer) dataIterator.next(), tmpId, 1, chunkService);
             }
 
             // Create, register AddressChunk
-            chunkService.create().create(getShortData(nameService.getChunkID("SID"+i, 100),chunkService), tmpAddressChunkId, 1, GLOBAL_CHUNK_SIZE*tmpIds.length);
+            chunkService.create().create(actualNodeID, tmpAddressChunkId, 1, GLOBAL_CHUNK_SIZE*tmpIds.length);
             editChunkLongArray(tmpIds, tmpAddressChunkId[0], chunkService);
             nameService.register(tmpAddressChunkId[0], "AC" + i);
 
             // Size of AddressChunk
-            chunkService.create().create(onlineNodeIDs.get(i), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
+            chunkService.create().create(actualNodeID, tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
             editChunkInt(tmpIds.length, tmpSizeChunkId[0], 1, chunkService);
             nameService.register(tmpSizeChunkId[0], "SAC" + i);
 
             addressChunkSize[i]=tmpIds.length;
         }
+
+        System.out.println("CHUNKS EINGELESEN");
+
+        System.out.println("START: " + System.nanoTime());
 
         // Create GoThrough-Parameter
         chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
@@ -158,25 +165,33 @@ public class MergeSort extends AbstractApplication {
         TaskScript sortScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Sort Task", sortTask);
         masterSlaveComputeService.submitTaskScript(sortScript);
 
-        int goThrough = onlineWorkerNodeIDs.size();
+        int cycle = onlineWorkerNodeIDs.size();
 
         MergeTask mergeTask = new MergeTask();
         TaskScript mergeScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Merge Task", mergeTask);
-        while (goThrough > 1){
+
+        UpdateGTTask updateGTTask = new UpdateGTTask();
+        TaskScript updateGTTaskScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Update GT Task", updateGTTask);
+
+        while (cycle > 1){
             masterSlaveComputeService.submitTaskScript(mergeScript);
-            if (goThrough%2 ==0)
-                goThrough /=2;
-            else{
-                goThrough--;
-                UnevenMergeTask unevenMergeTask = new UnevenMergeTask();
-                TaskScript uneventaskScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "UnevenMerge Task", unevenMergeTask);
-                masterSlaveComputeService.submitTaskScript(uneventaskScript);
-            }
+            masterSlaveComputeService.submitTaskScript(updateGTTaskScript);
+
+            if (cycle % 2 == 0)
+                cycle /=2;
+            else
+                cycle--;
         }
 
         ExportTask exportTask = new ExportTask();
         TaskScript exportScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Export Task", exportTask);
         masterSlaveComputeService.submitTaskScript(exportScript);
+
+        /*
+        CleanUpTask cleanUpTask = new CleanUpTask();
+        TaskScript cleanUpScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Cleanup Task", cleanUpTask);
+        TaskScriptState cleanUpState = masterSlaveComputeService.submitTaskScript(cleanUpScript);
+        */
     }
 
     @Override
