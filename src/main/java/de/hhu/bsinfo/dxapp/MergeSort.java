@@ -9,10 +9,7 @@ import de.hhu.bsinfo.dxram.generated.BuildConfig;
 import de.hhu.bsinfo.dxram.ms.MasterNodeEntry;
 import de.hhu.bsinfo.dxram.ms.MasterSlaveComputeService;
 import de.hhu.bsinfo.dxram.ms.TaskScript;
-import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.ExportTask;
-import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.MergeTask;
-import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.ResourceTask;
-import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.SortTask;
+import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.*;
 import de.hhu.bsinfo.dxram.nameservice.NameserviceService;
 import de.hhu.bsinfo.dxutils.NodeID;
 
@@ -149,13 +146,13 @@ public class MergeSort extends AbstractApplication {
             editChunkInt(tmpIds.length, tmpSizeChunkId[0], 1, chunkService);
             nameService.register(tmpSizeChunkId[0], "SAC" + i);
 
-            // Create GoThrough-Parameter
-            chunkService.create().create(onlineNodeIDs.get(i), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
-            editChunkInt(2, tmpSizeChunkId[0], 1, chunkService);
-            nameService.register(tmpSizeChunkId[0], "GT" + i);
-
             addressChunkSize[i]=tmpIds.length;
         }
+
+        // Create GoThrough-Parameter
+        chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
+        editChunkInt(2, tmpSizeChunkId[0], 1, chunkService);
+        nameService.register(tmpSizeChunkId[0], "GT");
 
         SortTask sortTask = new SortTask();
         TaskScript sortScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Sort Task", sortTask);
@@ -167,7 +164,14 @@ public class MergeSort extends AbstractApplication {
         TaskScript mergeScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Merge Task", mergeTask);
         while (goThrough > 1){
             masterSlaveComputeService.submitTaskScript(mergeScript);
-            goThrough /=2;
+            if (goThrough%2 ==0)
+                goThrough /=2;
+            else{
+                goThrough--;
+                UnevenMergeTask unevenMergeTask = new UnevenMergeTask();
+                TaskScript uneventaskScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "UnevenMerge Task", unevenMergeTask);
+                masterSlaveComputeService.submitTaskScript(uneventaskScript);
+            }
         }
 
         ExportTask exportTask = new ExportTask();
