@@ -9,13 +9,12 @@ import de.hhu.bsinfo.dxram.generated.BuildConfig;
 import de.hhu.bsinfo.dxram.ms.MasterNodeEntry;
 import de.hhu.bsinfo.dxram.ms.MasterSlaveComputeService;
 import de.hhu.bsinfo.dxram.ms.TaskScript;
-import de.hhu.bsinfo.dxram.ms.TaskScriptState;
 import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.*;
 import de.hhu.bsinfo.dxram.nameservice.NameserviceService;
 import de.hhu.bsinfo.dxutils.NodeID;
+import org.apache.logging.log4j.core.util.FileUtils;
 
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 import java.util.*;
@@ -76,13 +75,20 @@ public class MergeSort extends AbstractApplication {
         // Read data from file given in argument p_args[0] to inputData
         String filepath = "dxapp/data/" + p_args[0];
         String seperator = ", ";
-        List<Integer> inputData = readData(filepath, seperator);
+
+        //List<Integer> inputData = readData(filepath, seperator);
+        List<Integer> inputData = null;
+        try {
+            inputData = readDataOtherwise(filepath, seperator);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         System.out.println("Einlesen abgeschlossen");
 
         if (p_args.length == 2){
             writeOutSize = Integer.parseInt(p_args[1]);
-            if (writeOutSize < 1)
+            if (writeOutSize < 0)
                 throw new IllegalArgumentException("Exportparameter has to be greater than 0");
         }
 
@@ -294,6 +300,22 @@ public class MergeSort extends AbstractApplication {
             list.add(scanner.nextInt());
         }
         scanner.close();
+        return list;
+    }
+
+    private List<Integer> readDataOtherwise(String filepath, String seperator) throws IOException {
+        List<Integer> list = new ArrayList<>();
+
+        File file = new File(filepath);
+        BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
+        String readLine = "";
+
+        while ((readLine = bufferedReader.readLine()) != null){
+            List<String> items = Arrays.asList(readLine.split(seperator));
+            for (String s : items)
+                list.add(Integer.valueOf(s));
+        }
+
         return list;
     }
 }
