@@ -126,14 +126,13 @@ public class MergeSort extends AbstractApplication {
             long[] tmpAddressChunkId = new long[1];
             tmpSizeChunkId = new long[1];
 
-            if (overhead!= 0){
+            if (overhead > 0){
                 if (overhead >= resources[i]){
                     tmpIds = new long[resources[i]*(sizeOfPartedData+1)];
                     overhead -= resources[i];
                 } else {
                     tmpIds = new long[sizeOfPartedData+overhead];
                 }
-
             } else {
                 tmpIds = new long[resources[i]*sizeOfPartedData];
             }
@@ -141,9 +140,12 @@ public class MergeSort extends AbstractApplication {
             short actualNodeID = getShortData(nameService.getChunkID("SID"+i, 100), chunkService);
 
             chunkService.create().create(actualNodeID, tmpIds, tmpIds.length, GLOBAL_CHUNK_SIZE);
+            System.out.println("Chunkarray erstellt");
+            System.out.println("Länge: " + tmpIds.length);
             for (long tmpId : tmpIds) {
                 editChunkInt((Integer) dataIterator.next(), tmpId, 1, chunkService);
             }
+            System.out.println("Fertiggestellt");
 
             // Create, register AddressChunk
             chunkService.create().create(actualNodeID, tmpAddressChunkId, 1, GLOBAL_CHUNK_SIZE*tmpIds.length);
