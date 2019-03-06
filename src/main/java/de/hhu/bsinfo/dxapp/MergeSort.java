@@ -12,6 +12,7 @@ import de.hhu.bsinfo.dxram.ms.TaskScript;
 import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.*;
 import de.hhu.bsinfo.dxram.nameservice.NameserviceService;
 import de.hhu.bsinfo.dxutils.NodeID;
+
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
@@ -24,10 +25,13 @@ import java.util.*;
  * @author Julian Schacht, julian-morten.schacht@uni-duesseldorf.de, 15.03.2019
  */
 public class MergeSort extends AbstractApplication {
+    private static String filepath ="";
+    private static String seperator =", ";
 
     private final static int GLOBAL_CHUNK_SIZE = 64;
 
     private static int writeOutSize = 1;
+    private static boolean normal = false;
 
     @Override
     public DXRAMVersion getBuiltAgainstVersion() {
@@ -57,6 +61,21 @@ public class MergeSort extends AbstractApplication {
         List<Short> onlineNodeIDs = bootService.getOnlineNodeIDs();
         List<Short> onlineWorkerNodeIDs = new ArrayList<>();
         Iterator<Short> onlineNodeIDsIterator = onlineNodeIDs.iterator();
+        ArrayList<String> arguments = new ArrayList<>(Arrays.asList(p_args));
+
+        if (arguments.contains("--path")){
+            int argumentIndex = arguments.indexOf("--path")+1;
+            filepath = arguments.get(argumentIndex);
+        }
+        if (arguments.contains("--normal")){
+            normal = true;
+        }
+        if (arguments.contains("-- out")){
+            int argumentIndex = arguments.indexOf("--out")+1;
+            writeOutSize = Integer.parseInt(arguments.get(argumentIndex));
+            if (writeOutSize < 0)
+                throw new IllegalArgumentException("Exportparameter has to be positive");
+        }
 
         ArrayList<MasterNodeEntry> masterNodes = masterSlaveComputeService.getMasters();
         ArrayList<Short> masterNodeIDs = new ArrayList<>();
@@ -70,131 +89,135 @@ public class MergeSort extends AbstractApplication {
             if (bootService.getNodeRole(tmp).toString().equals("peer") && !masterNodeIDs.contains(tmp))
                 onlineWorkerNodeIDs.add(tmp);
         }
-        // Read data from file given in argument p_args[0] to inputData
-        String filepath = "dxapp/data/" + p_args[0];
-        String seperator = ", ";
 
         //List<Integer> inputData = readData(filepath, seperator);
         List<Integer> inputData = null;
         try {
-            inputData = readDataOtherwise(filepath, seperator);
+            inputData = readData(filepath, seperator);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         System.out.println("Einlesen abgeschlossen");
 
-        if (p_args.length == 2){
-            writeOutSize = Integer.parseInt(p_args[1]);
-            if (writeOutSize < 0)
-                throw new IllegalArgumentException("Exportparameter has to be greater than 0");
-        }
+        if (!normal) {
 
-        long[] tmpSizeChunkId = new long[1];
-        chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
-        editChunkInt(writeOutSize, tmpSizeChunkId[0], 1, chunkService);
-        nameService.register(tmpSizeChunkId[0], "WO");
+            long[] tmpSizeChunkId = new long[1];
+            chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
+            editChunkInt(writeOutSize, tmpSizeChunkId[0], 1, chunkService);
 
-        short GLOBAL_PEER_MINIMUM = (short) onlineWorkerNodeIDs.size();
-        short GLOBAL_PEER_MAXIMUM = (short) onlineWorkerNodeIDs.size();
+            nameService.register(tmpSizeChunkId[0], "WO");
 
-        // Get resources (number of available cores)
-        ResourceTask resourceTask = new ResourceTask();
-        TaskScript resourceScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "resource Task", resourceTask);
-        masterSlaveComputeService.submitTaskScript(resourceScript);
+            short GLOBAL_PEER_MINIMUM = (short) onlineWorkerNodeIDs.size();
+            short GLOBAL_PEER_MAXIMUM = (short) onlineWorkerNodeIDs.size();
 
-        // Save data of the resource-Task
-        int[] resources = new int[onlineWorkerNodeIDs.size()];
-        int split = 0;
-        for (int i=0; i<onlineWorkerNodeIDs.size();i++){
-            long chunkID= nameService.getChunkID("RC" +i,100);
-            resources[i] = getIntData(chunkID, chunkService);
-            split += resources[i];
-        }
+            // Get resources (number of available cores)
+            ResourceTask resourceTask = new ResourceTask();
+            TaskScript resourceScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "resource Task", resourceTask);
+            masterSlaveComputeService.submitTaskScript(resourceScript);
 
-        int sizeOfPartedData = inputData.size() / split;
-        int overhead = inputData.size() % split;
+            // Save data of the resource-Task
+            int[] resources = new int[onlineWorkerNodeIDs.size()];
+            int split = 0;
+            for (int i = 0; i < onlineWorkerNodeIDs.size(); i++) {
+                long chunkID = nameService.getChunkID("RC" + i, 100);
+                resources[i] = getIntData(chunkID, chunkService);
+                split += resources[i];
+            }
 
-        int[] addressChunkSize = new int[onlineWorkerNodeIDs.size()];
+            int sizeOfPartedData = inputData.size() / split;
+            int overhead = inputData.size() % split;
 
-        // Write Chunk Ids to Matrix
-        Iterator dataIterator = inputData.iterator();
-        for (int i=0; i<onlineWorkerNodeIDs.size(); i++){
-            long[] tmpIds;
-            long[] tmpAddressChunkId = new long[1];
-            tmpSizeChunkId = new long[1];
+            System.out.println("ressourcen: " + Arrays.toString(resources));
+            System.out.println("Size of parted data: " + sizeOfPartedData);
+            System.out.println("overhead: " + overhead);
+            System.out.println("onlineWorkernodes: " + onlineWorkerNodeIDs.size());
+            System.out.println("size of data: " + inputData.size());
 
-            if (overhead > 0){
-                if (overhead >= resources[i]){
-                    tmpIds = new long[resources[i]*(sizeOfPartedData+1)];
-                    overhead -= resources[i];
+            int[] addressChunkSize = new int[onlineWorkerNodeIDs.size()];
+
+            // Write Chunk Ids to Matrix
+            Iterator<Integer> dataIterator = inputData.iterator();
+            for (int i = 0; i < onlineWorkerNodeIDs.size(); i++) {
+                long[] tmpIds;
+                long[] tmpAddressChunkId = new long[1];
+                tmpSizeChunkId = new long[1];
+
+                if (overhead > 0) {
+                    if (overhead >= resources[i]) {
+                        tmpIds = new long[resources[i] * (sizeOfPartedData + 1)];
+                        overhead -= resources[i];
+                    } else {
+                        tmpIds = new long[sizeOfPartedData + overhead];
+                    }
                 } else {
-                    tmpIds = new long[sizeOfPartedData+overhead];
+                    tmpIds = new long[resources[i] * sizeOfPartedData];
                 }
-            } else {
-                tmpIds = new long[resources[i]*sizeOfPartedData];
+
+                short actualNodeID = getShortData(nameService.getChunkID("SID" + i, 100), chunkService);
+
+                chunkService.create().create(actualNodeID, tmpIds, tmpIds.length, GLOBAL_CHUNK_SIZE);
+                for (long tmpId : tmpIds)
+                    editChunkInt(dataIterator.next(), tmpId, 1, chunkService);
+
+                // Create, register AddressChunk
+                chunkService.create().create(actualNodeID, tmpAddressChunkId, 1, GLOBAL_CHUNK_SIZE * tmpIds.length);
+                editChunkLongArray(tmpIds, tmpAddressChunkId[0], chunkService);
+                nameService.register(tmpAddressChunkId[0], "AC" + i);
+
+                // Size of AddressChunk
+                chunkService.create().create(actualNodeID, tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
+                editChunkInt(tmpIds.length, tmpSizeChunkId[0], 1, chunkService);
+                nameService.register(tmpSizeChunkId[0], "SAC" + i);
+
+                addressChunkSize[i] = tmpIds.length;
             }
 
-            short actualNodeID = getShortData(nameService.getChunkID("SID"+i, 100), chunkService);
+            System.out.println("CHUNKS EINGELESEN");
 
-            chunkService.create().create(actualNodeID, tmpIds, tmpIds.length, GLOBAL_CHUNK_SIZE);
-            for (long tmpId : tmpIds) {
-                editChunkInt((Integer) dataIterator.next(), tmpId, 1, chunkService);
+            // Create GoThrough-Parameter
+            chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
+            editChunkInt(2, tmpSizeChunkId[0], 1, chunkService);
+            nameService.register(tmpSizeChunkId[0], "GT");
+
+            chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
+            editChunkInt(onlineWorkerNodeIDs.size(), tmpSizeChunkId[0], 1, chunkService);
+            nameService.register(tmpSizeChunkId[0], "WN");
+
+            SortTask sortTask = new SortTask();
+            TaskScript sortScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Sort Task", sortTask);
+            masterSlaveComputeService.submitTaskScript(sortScript);
+
+            int cycle = onlineWorkerNodeIDs.size();
+
+            MergeTask mergeTask = new MergeTask();
+            TaskScript mergeScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Merge Task", mergeTask);
+
+            UpdateGTTask updateGTTask = new UpdateGTTask();
+            TaskScript updateGTTaskScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Update GT Task", updateGTTask);
+
+            while (cycle > 1) {
+                masterSlaveComputeService.submitTaskScript(mergeScript);
+                masterSlaveComputeService.submitTaskScript(updateGTTaskScript);
+
+                if (cycle % 2 == 0)
+                    cycle /= 2;
+                else
+                    cycle = (int) Math.ceil((double) cycle / 2);
             }
 
-            // Create, register AddressChunk
-            chunkService.create().create(actualNodeID, tmpAddressChunkId, 1, GLOBAL_CHUNK_SIZE*tmpIds.length);
-            editChunkLongArray(tmpIds, tmpAddressChunkId[0], chunkService);
-            nameService.register(tmpAddressChunkId[0], "AC" + i);
-
-            // Size of AddressChunk
-            chunkService.create().create(actualNodeID, tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
-            editChunkInt(tmpIds.length, tmpSizeChunkId[0], 1, chunkService);
-            nameService.register(tmpSizeChunkId[0], "SAC" + i);
-
-            addressChunkSize[i]=tmpIds.length;
-        }
-
-        System.out.println("CHUNKS EINGELESEN");
-
-        System.out.println("START: " + System.nanoTime());
-
-        // Create GoThrough-Parameter
-        chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
-        editChunkInt(2, tmpSizeChunkId[0], 1, chunkService);
-        nameService.register(tmpSizeChunkId[0], "GT");
-
-        SortTask sortTask = new SortTask();
-        TaskScript sortScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Sort Task", sortTask);
-        masterSlaveComputeService.submitTaskScript(sortScript);
-
-        int cycle = onlineWorkerNodeIDs.size();
-
-        MergeTask mergeTask = new MergeTask();
-        TaskScript mergeScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Merge Task", mergeTask);
-
-        UpdateGTTask updateGTTask = new UpdateGTTask();
-        TaskScript updateGTTaskScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Update GT Task", updateGTTask);
-
-        while (cycle > 1){
-            masterSlaveComputeService.submitTaskScript(mergeScript);
-            masterSlaveComputeService.submitTaskScript(updateGTTaskScript);
-
-            if (cycle % 2 == 0)
-                cycle /=2;
-            else
-                cycle--;
-        }
-
-        ExportTask exportTask = new ExportTask();
-        TaskScript exportScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Export Task", exportTask);
-        masterSlaveComputeService.submitTaskScript(exportScript);
+            ExportTask exportTask = new ExportTask();
+            TaskScript exportScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Export Task", exportTask);
+            masterSlaveComputeService.submitTaskScript(exportScript);
 
         /*
         CleanUpTask cleanUpTask = new CleanUpTask();
         TaskScript cleanUpScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Cleanup Task", cleanUpTask);
         TaskScriptState cleanUpState = masterSlaveComputeService.submitTaskScript(cleanUpScript);
         */
+        }
+        else
+            System.out.println("Normal");
     }
 
     @Override
@@ -216,7 +239,7 @@ public class MergeSort extends AbstractApplication {
      * @param chunkService
      *          Chunkservice to manage the operation
      */
-    private void editChunkInt(int value, long chunkId, int size , ChunkService chunkService){
+    private void editChunkInt(int value, long chunkId, int size , ChunkService chunkService) {
         ByteBuffer byteBuffer = ByteBuffer.allocate(size*GLOBAL_CHUNK_SIZE);
         byteBuffer.putInt(value);
         ChunkByteArray chunkByteArray = new ChunkByteArray(chunkId, byteBuffer.array());
@@ -233,7 +256,7 @@ public class MergeSort extends AbstractApplication {
      * @param chunkService
      *          Chunkservice to manage the operation
      */
-    private void editChunkLongArray(long[] array, long chunkId, ChunkService chunkService){
+    private void editChunkLongArray(long[] array, long chunkId, ChunkService chunkService) {
         ByteBuffer byteBuffer = ByteBuffer.allocate(array.length*GLOBAL_CHUNK_SIZE);
         LongBuffer longBuffer = byteBuffer.asLongBuffer();
         longBuffer.put(array);
@@ -274,7 +297,7 @@ public class MergeSort extends AbstractApplication {
     }
 
     /**
-     * Reads the values of a file into DXRAM-storage
+     * Reads the values of a file line by line into an arraylist
      * @param filepath
      *          Defines the filepath
      * @param seperator
@@ -282,25 +305,7 @@ public class MergeSort extends AbstractApplication {
      * @return
      *          Returns a list containing the values
      */
-    private List<Integer> readData(String filepath, String seperator){
-        Scanner scanner = null;
-        try {
-            scanner = new Scanner(new File(filepath));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        scanner.useDelimiter(seperator);
-        List<Integer> list = new ArrayList<>();
-
-        while (scanner.hasNext()) {
-            list.add(scanner.nextInt());
-        }
-        scanner.close();
-        return list;
-    }
-
-    private List<Integer> readDataOtherwise(String filepath, String seperator) throws IOException {
+    private List<Integer> readData(String filepath, String seperator) throws IOException {
         List<Integer> list = new ArrayList<>();
 
         File file = new File(filepath);
