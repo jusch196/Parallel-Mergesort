@@ -12,8 +12,6 @@ import de.hhu.bsinfo.dxram.ms.TaskScript;
 import de.hhu.bsinfo.dxram.ms.tasks.mergesortapplication.*;
 import de.hhu.bsinfo.dxram.nameservice.NameserviceService;
 import de.hhu.bsinfo.dxutils.NodeID;
-import org.apache.logging.log4j.core.util.FileUtils;
-
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
@@ -144,6 +142,7 @@ public class MergeSort extends AbstractApplication {
             System.out.println("Länge: " + tmpIds.length);
             for (long tmpId : tmpIds) {
                 editChunkInt((Integer) dataIterator.next(), tmpId, 1, chunkService);
+                System.out.println("läuft");
             }
             System.out.println("Fertiggestellt");
 
