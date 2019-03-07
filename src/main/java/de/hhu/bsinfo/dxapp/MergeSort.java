@@ -44,7 +44,7 @@ public class MergeSort extends AbstractApplication {
     }
 
     @Override
-    public void main(final String[] p_args) {
+    public void main(final String[] p_args) throws IOException {
 
         // Get services
         BootService bootService = getService(BootService.class);
@@ -89,6 +89,7 @@ public class MergeSort extends AbstractApplication {
             if (bootService.getNodeRole(tmp).toString().equals("peer") && !masterNodeIDs.contains(tmp))
                 onlineWorkerNodeIDs.add(tmp);
         }
+        System.out.println("Es arbeiten: " + onlineWorkerNodeIDs.size() + " Workernodes");
 
         //List<Integer> inputData = readData(filepath, seperator);
         List<Integer> inputData = null;
@@ -216,8 +217,48 @@ public class MergeSort extends AbstractApplication {
         TaskScriptState cleanUpState = masterSlaveComputeService.submitTaskScript(cleanUpScript);
         */
         }
-        else
+        else{
             System.out.println("Normal");
+
+            assert inputData != null;
+            int[] array = new int[inputData.size()];
+            for (int i=0; i<array.length;i++){
+                array[i] = inputData.get(i);
+            }
+
+            mergeSortJvN(array, 0, array.length-1);
+
+            normal = false;
+            int length = array.length;
+
+            if (writeOutSize > 1){
+                System.out.println("hier geht er nicht rein");
+                int writeOutIndex;
+
+                for (int i = 0; i < writeOutSize - 1; i++) {
+                    String filename = "dxapp/data/sortedData" + i + ".csv";
+                    BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
+                    writeOutIndex = i * length / writeOutSize;
+
+                    for (int j = 0; j < length / writeOutSize; j++) {
+                        outputWriter.write(array[writeOutIndex + j] + ", ");
+                    }
+                    outputWriter.flush();
+                    outputWriter.close();
+                }
+            }
+
+            System.out.println("Hier kommen wir an");
+            int name = writeOutSize-1;
+            String filename = "dxapp/data/sortedData"+name+".csv";
+            BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
+
+            for (int i=(writeOutSize-1)*length/writeOutSize; i<length;i++){
+                outputWriter.write(array[i] + ", ");
+            }
+            outputWriter.flush();
+            outputWriter.close();
+            }
     }
 
     @Override
@@ -319,5 +360,70 @@ public class MergeSort extends AbstractApplication {
         }
 
         return list;
+    }
+
+    private static void mergeJvN(int[] array, int left, int breakpoint, int right) {
+        int i, j, k;
+        int n1 = breakpoint - left + 1;
+        int n2 =  right - breakpoint;
+
+        // create temp arrays
+        int[] L = new int[n1];
+        int[] R = new int[n2];
+
+        // Copy data to temp arrays L[] and R[]
+        for (i = 0; i < n1; i++)
+            L[i] = array[left + i];
+        for (j = 0; j < n2; j++)
+            R[j] = array[breakpoint + 1+ j];
+
+        // Merge the temp arrays back into arr[l..r]
+        i = 0; // Initial index of first subarray
+        j = 0; // Initial index of second subarray
+        k = left; // Initial index of merged subarray
+        while (i < n1 && j < n2)
+        {
+            if (L[i] <= R[j])
+            {
+                array[k] = L[i];
+                i++;
+            }
+            else
+            {
+                array[k] = R[j];
+                j++;
+            }
+            k++;
+        }
+
+        //Copy the remaining elements of L[], if there are any
+        while (i < n1)
+        {
+            array[k] = L[i];
+            i++;
+            k++;
+        }
+
+        // Copy the remaining elements of R[], if there are any
+        while (j < n2)
+        {
+            array[k] = R[j];
+            j++;
+            k++;
+        }
+    }
+    private static void mergeSortJvN(int[] array, int left, int right) {
+        if (left < right)
+        {
+            // Same as (l+r)/2, but avoids overflow for
+            // large l and h
+            int m = left+(right-left)/2;
+
+            // Sort first and second halves
+            mergeSortJvN(array, left, m);
+            mergeSortJvN(array, m+1, right);
+
+            mergeJvN(array, left, m, right);
+        }
     }
 }
