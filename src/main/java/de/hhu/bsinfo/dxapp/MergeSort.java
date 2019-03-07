@@ -99,8 +99,6 @@ public class MergeSort extends AbstractApplication {
             e.printStackTrace();
         }
 
-        System.out.println("Einlesen abgeschlossen");
-
         if (!normal) {
 
             long[] tmpSizeChunkId = new long[1];
@@ -128,12 +126,6 @@ public class MergeSort extends AbstractApplication {
 
             int sizeOfPartedData = inputData.size() / split;
             int overhead = inputData.size() % split;
-
-            System.out.println("ressourcen: " + Arrays.toString(resources));
-            System.out.println("Size of parted data: " + sizeOfPartedData);
-            System.out.println("overhead: " + overhead);
-            System.out.println("onlineWorkernodes: " + onlineWorkerNodeIDs.size());
-            System.out.println("size of data: " + inputData.size());
 
             int[] addressChunkSize = new int[onlineWorkerNodeIDs.size()];
 
@@ -173,8 +165,6 @@ public class MergeSort extends AbstractApplication {
 
                 addressChunkSize[i] = tmpIds.length;
             }
-
-            System.out.println("CHUNKS EINGELESEN");
 
             // Create GoThrough-Parameter
             chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
@@ -218,7 +208,7 @@ public class MergeSort extends AbstractApplication {
         */
         }
         else{
-            System.out.println("Normal");
+            System.out.println("Start: " + System.nanoTime());
 
             assert inputData != null;
             int[] array = new int[inputData.size()];
@@ -248,7 +238,6 @@ public class MergeSort extends AbstractApplication {
                 }
             }
 
-            System.out.println("Hier kommen wir an");
             int name = writeOutSize-1;
             String filename = "dxapp/data/sortedData"+name+".csv";
             BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
@@ -258,6 +247,7 @@ public class MergeSort extends AbstractApplication {
             }
             outputWriter.flush();
             outputWriter.close();
+            System.out.println("Ende: " + System.nanoTime());
             }
     }
 
