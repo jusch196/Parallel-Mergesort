@@ -16,7 +16,10 @@ import de.hhu.bsinfo.dxutils.NodeID;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 
 /**
@@ -32,6 +35,7 @@ public class MergeSort extends AbstractApplication {
 
     private static int writeOutSize = 1;
     private static boolean normal = false;
+    private static boolean local = false;
 
     @Override
     public DXRAMVersion getBuiltAgainstVersion() {
@@ -66,9 +70,12 @@ public class MergeSort extends AbstractApplication {
         if (arguments.contains("--path")){
             int argumentIndex = arguments.indexOf("--path")+1;
             filepath = arguments.get(argumentIndex);
-        }
+        } else throw new IllegalArgumentException("Error: Path ist missing");
         if (arguments.contains("--normal")){
             normal = true;
+        }
+        if (arguments.contains("--local")){
+            local = true;
         }
         if (arguments.contains("-- out")){
             int argumentIndex = arguments.indexOf("--out")+1;
@@ -99,7 +106,150 @@ public class MergeSort extends AbstractApplication {
             e.printStackTrace();
         }
 
-        if (!normal) {
+        if (local && normal)
+            throw new IllegalArgumentException("Can't set '--normal' and '--local'!");
+
+        if (local){
+            assert inputData != null;
+            int[] array = new int[inputData.size()];
+            for (int i=0; i<array.length;i++){
+                array[i] = inputData.get(i);
+            }
+            inputData.clear();
+
+            int availableResources = Runtime.getRuntime().availableProcessors();
+            Thread[] threads = new Thread[availableResources];
+            int[] partialListLength = new int[availableResources];
+            int lengthOfSplits = array.length/availableResources;
+            int overhead = array.length % availableResources;
+
+            // Run John von Neumann mergesort on each partial list
+            for (int i = 0, j = 0; i < availableResources; i++) {
+                if (j < overhead) {
+                    threads[i] = new SortAlgorithm(array, i * lengthOfSplits + j, lengthOfSplits+1);
+                    partialListLength[i] = lengthOfSplits + 1;
+                    j++;
+                } else {
+                    threads[i] = new SortAlgorithm(array, (i * lengthOfSplits) + j, lengthOfSplits);
+                    partialListLength[i] = lengthOfSplits;
+                }
+            }
+
+            boolean powTwo = true;
+
+            while (availableResources > 1){
+                double splitCheck = (double) availableResources/2;
+                if (splitCheck %1 != 0){
+                    powTwo = false;
+                }
+                availableResources /= 2;
+                threads = new Thread[availableResources];
+
+                for (int i = 0; i < availableResources; i++) {
+                    mergeNaive(i, partialListLength, array, threads);
+                }
+
+                // Update listlength
+                int[] tmp;
+                if (!powTwo){
+                    tmp = new int[availableResources+1];
+
+                    for (int i = 0; i < tmp.length-1; i++) {
+                        tmp[i] = partialListLength[2 * i];
+                        if (2 * i + 1 < partialListLength.length) {
+                            tmp[i] += partialListLength[2 * i + 1];
+                        }
+                    }
+                    tmp[tmp.length-1] = partialListLength[partialListLength.length-1];
+                    powTwo = true;
+                    availableResources++;
+
+                } else{
+                    tmp = new int[availableResources];
+                    for (int i = 0; i < tmp.length; i++) {
+                        tmp[i] = partialListLength[2 * i];
+                        if (2 * i + 1 < partialListLength.length) {
+                            tmp[i] += partialListLength[2 * i + 1];
+                        }
+                    }
+                }
+                partialListLength = tmp;
+            }
+
+            local = false;
+            int length = array.length;
+
+            if (writeOutSize > 1){
+                int writeOutIndex;
+
+                for (int i = 0; i < writeOutSize - 1; i++) {
+                    String filename = "dxapp/data/sortedData" + i + ".csv";
+                    BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
+                    writeOutIndex = i * length / writeOutSize;
+
+                    for (int j = 0; j < length / writeOutSize; j++) {
+                        outputWriter.write(array[writeOutIndex + j] + ", ");
+                    }
+                    outputWriter.flush();
+                    outputWriter.close();
+                }
+            }
+
+            int name = writeOutSize-1;
+            String filename = "dxapp/data/sortedData"+name+".csv";
+            BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
+
+            for (int i=(writeOutSize-1)*length/writeOutSize; i<length;i++){
+                outputWriter.write(array[i] + ", ");
+            }
+            outputWriter.flush();
+            outputWriter.close();
+            System.out.println("Ende: " + System.nanoTime());
+
+
+        }
+        else if (normal){
+            System.out.println("Start: " + System.nanoTime());
+
+            assert inputData != null;
+            int[] array = new int[inputData.size()];
+            for (int i=0; i<array.length;i++){
+                array[i] = inputData.get(i);
+            }
+            inputData.clear();
+            mergeSortJvN(array, 0, array.length-1);
+
+            normal = false;
+            int length = array.length;
+
+            if (writeOutSize > 1){
+                int writeOutIndex;
+
+                for (int i = 0; i < writeOutSize - 1; i++) {
+                    String filename = "dxapp/data/sortedData" + i + ".csv";
+                    BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
+                    writeOutIndex = i * length / writeOutSize;
+
+                    for (int j = 0; j < length / writeOutSize; j++) {
+                        outputWriter.write(array[writeOutIndex + j] + ", ");
+                    }
+                    outputWriter.flush();
+                    outputWriter.close();
+                }
+            }
+
+            int name = writeOutSize-1;
+            String filename = "dxapp/data/sortedData"+name+".csv";
+            BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
+
+            for (int i=(writeOutSize-1)*length/writeOutSize; i<length;i++){
+                outputWriter.write(array[i] + ", ");
+            }
+            outputWriter.flush();
+            outputWriter.close();
+            System.out.println("Ende: " + System.nanoTime());
+            }
+        else {
 
             long[] tmpSizeChunkId = new long[1];
             chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
@@ -166,6 +316,8 @@ public class MergeSort extends AbstractApplication {
                 addressChunkSize[i] = tmpIds.length;
             }
 
+            System.out.println("Größe: " +inputData.size());
+
             // Create GoThrough-Parameter
             chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
             editChunkInt(2, tmpSizeChunkId[0], 1, chunkService);
@@ -184,12 +336,12 @@ public class MergeSort extends AbstractApplication {
             MergeTask mergeTask = new MergeTask();
             TaskScript mergeScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Merge Task", mergeTask);
 
-            UpdateGTTask updateGTTask = new UpdateGTTask();
-            TaskScript updateGTTaskScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Update GT Task", updateGTTask);
+            UpdateWNTask updateWNTask = new UpdateWNTask();
+            TaskScript updateWNTaskScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Update WN Task", updateWNTask);
 
             while (cycle > 1) {
                 masterSlaveComputeService.submitTaskScript(mergeScript);
-                masterSlaveComputeService.submitTaskScript(updateGTTaskScript);
+                masterSlaveComputeService.submitTaskScript(updateWNTaskScript);
 
                 if (cycle % 2 == 0)
                     cycle /= 2;
@@ -207,48 +359,6 @@ public class MergeSort extends AbstractApplication {
         TaskScriptState cleanUpState = masterSlaveComputeService.submitTaskScript(cleanUpScript);
         */
         }
-        else{
-            System.out.println("Start: " + System.nanoTime());
-
-            assert inputData != null;
-            int[] array = new int[inputData.size()];
-            for (int i=0; i<array.length;i++){
-                array[i] = inputData.get(i);
-            }
-
-            mergeSortJvN(array, 0, array.length-1);
-
-            normal = false;
-            int length = array.length;
-
-            if (writeOutSize > 1){
-                System.out.println("hier geht er nicht rein");
-                int writeOutIndex;
-
-                for (int i = 0; i < writeOutSize - 1; i++) {
-                    String filename = "dxapp/data/sortedData" + i + ".csv";
-                    BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
-                    writeOutIndex = i * length / writeOutSize;
-
-                    for (int j = 0; j < length / writeOutSize; j++) {
-                        outputWriter.write(array[writeOutIndex + j] + ", ");
-                    }
-                    outputWriter.flush();
-                    outputWriter.close();
-                }
-            }
-
-            int name = writeOutSize-1;
-            String filename = "dxapp/data/sortedData"+name+".csv";
-            BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
-
-            for (int i=(writeOutSize-1)*length/writeOutSize; i<length;i++){
-                outputWriter.write(array[i] + ", ");
-            }
-            outputWriter.flush();
-            outputWriter.close();
-            System.out.println("Ende: " + System.nanoTime());
-            }
     }
 
     @Override
@@ -415,5 +525,23 @@ public class MergeSort extends AbstractApplication {
 
             mergeJvN(array, left, m, right);
         }
+    }
+
+    /**
+     * Merges two half's of a block which indices are stored in listlength*
+     * @param blockIndex
+     *          Index of the block to sort
+     */
+    private static void mergeNaive(int blockIndex, int[] partialListLength, int[] array, Thread[] threads){
+
+        int start=0, breakpoint, end;
+
+        for (int i=0; i<2*blockIndex;i++){
+            start += partialListLength[i];
+        }
+        breakpoint = start + partialListLength[2*blockIndex];
+        end = breakpoint + partialListLength[2*blockIndex+1] -1;
+
+        threads[blockIndex] = new MergeAlgorithm(array,start,end,breakpoint);
     }
 }
