@@ -35,6 +35,7 @@ class MergeAlgorithm extends Thread {
                 finalArray[finalIndex] = array[indexRight];
                 indexRight++;
             }
+
             finalIndex++;
         }
 

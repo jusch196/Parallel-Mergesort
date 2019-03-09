@@ -32,6 +32,7 @@ public class MergeSort extends AbstractApplication {
     private static String seperator =", ";
 
     private final static int GLOBAL_CHUNK_SIZE = 64;
+    private static ChunkService chunkService;
 
     private static int writeOutSize = 1;
     private static boolean normal = false;
@@ -52,7 +53,7 @@ public class MergeSort extends AbstractApplication {
 
         // Get services
         BootService bootService = getService(BootService.class);
-        ChunkService chunkService = getService(ChunkService.class);
+        chunkService = getService(ChunkService.class);
         NameserviceService nameService = getService(NameserviceService.class);
         MasterSlaveComputeService masterSlaveComputeService = getService(MasterSlaveComputeService.class);
 
@@ -61,7 +62,6 @@ public class MergeSort extends AbstractApplication {
                 Arrays.toString(p_args));
 
         // Put your application code running on the DXRAM node/peer here
-
         List<Short> onlineNodeIDs = bootService.getOnlineNodeIDs();
         List<Short> onlineWorkerNodeIDs = new ArrayList<>();
         Iterator<Short> onlineNodeIDsIterator = onlineNodeIDs.iterator();
@@ -80,12 +80,14 @@ public class MergeSort extends AbstractApplication {
         if (arguments.contains("-- out")){
             int argumentIndex = arguments.indexOf("--out")+1;
             writeOutSize = Integer.parseInt(arguments.get(argumentIndex));
+
             if (writeOutSize < 0)
                 throw new IllegalArgumentException("Exportparameter has to be positive");
         }
 
         ArrayList<MasterNodeEntry> masterNodes = masterSlaveComputeService.getMasters();
         ArrayList<Short> masterNodeIDs = new ArrayList<>();
+
         for (MasterNodeEntry tmp: masterNodes){
             masterNodeIDs.add(tmp.getNodeId());
         }
@@ -93,12 +95,11 @@ public class MergeSort extends AbstractApplication {
         // Find online nodes and add them to the IDlist
         while (onlineNodeIDsIterator.hasNext()){
             Short tmp = onlineNodeIDsIterator.next();
+
             if (bootService.getNodeRole(tmp).toString().equals("peer") && !masterNodeIDs.contains(tmp))
                 onlineWorkerNodeIDs.add(tmp);
         }
-        System.out.println("Es arbeiten: " + onlineWorkerNodeIDs.size() + " Workernodes");
 
-        //List<Integer> inputData = readData(filepath, seperator);
         List<Integer> inputData = null;
         try {
             inputData = readData(filepath, seperator);
@@ -111,11 +112,7 @@ public class MergeSort extends AbstractApplication {
 
         if (local){
             assert inputData != null;
-            int[] array = new int[inputData.size()];
-            for (int i=0; i<array.length;i++){
-                array[i] = inputData.get(i);
-            }
-            inputData.clear();
+            int[] array = localImport(inputData);
 
             int availableResources = Runtime.getRuntime().availableProcessors();
             Thread[] threads = new Thread[availableResources];
@@ -138,127 +135,75 @@ public class MergeSort extends AbstractApplication {
             boolean powTwo = true;
 
             while (availableResources > 1){
+
                 double splitCheck = (double) availableResources/2;
-                if (splitCheck %1 != 0){
+
+                if (splitCheck %1 != 0)
                     powTwo = false;
-                }
+
                 availableResources /= 2;
                 threads = new Thread[availableResources];
 
-                for (int i = 0; i < availableResources; i++) {
+                for (int i = 0; i < availableResources; i++)
                     mergeNaive(i, partialListLength, array, threads);
-                }
+
+                int[] tmp;
 
                 // Update listlength
-                int[] tmp;
                 if (!powTwo){
                     tmp = new int[availableResources+1];
 
                     for (int i = 0; i < tmp.length-1; i++) {
                         tmp[i] = partialListLength[2 * i];
-                        if (2 * i + 1 < partialListLength.length) {
+
+                        if (2 * i + 1 < partialListLength.length)
                             tmp[i] += partialListLength[2 * i + 1];
-                        }
+
                     }
+
                     tmp[tmp.length-1] = partialListLength[partialListLength.length-1];
                     powTwo = true;
                     availableResources++;
 
-                } else{
+                }
+                else{
                     tmp = new int[availableResources];
+
                     for (int i = 0; i < tmp.length; i++) {
                         tmp[i] = partialListLength[2 * i];
-                        if (2 * i + 1 < partialListLength.length) {
+
+                        if (2 * i + 1 < partialListLength.length)
                             tmp[i] += partialListLength[2 * i + 1];
-                        }
+
                     }
                 }
+
                 partialListLength = tmp;
             }
 
+            localExport(writeOutSize, array);
             local = false;
-            int length = array.length;
 
-            if (writeOutSize > 1){
-                int writeOutIndex;
-
-                for (int i = 0; i < writeOutSize - 1; i++) {
-                    String filename = "dxapp/data/sortedData" + i + ".csv";
-                    BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
-                    writeOutIndex = i * length / writeOutSize;
-
-                    for (int j = 0; j < length / writeOutSize; j++) {
-                        outputWriter.write(array[writeOutIndex + j] + ", ");
-                    }
-                    outputWriter.flush();
-                    outputWriter.close();
-                }
-            }
-
-            int name = writeOutSize-1;
-            String filename = "dxapp/data/sortedData"+name+".csv";
-            BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
-
-            for (int i=(writeOutSize-1)*length/writeOutSize; i<length;i++){
-                outputWriter.write(array[i] + ", ");
-            }
-            outputWriter.flush();
-            outputWriter.close();
-            System.out.println("Ende: " + System.nanoTime());
-
-
-        }
-        else if (normal){
-            System.out.println("Start: " + System.nanoTime());
+        } else if (normal){
 
             assert inputData != null;
-            int[] array = new int[inputData.size()];
-            for (int i=0; i<array.length;i++){
-                array[i] = inputData.get(i);
-            }
-            inputData.clear();
+            int[] array = localImport(inputData);
+
             mergeSortJvN(array, 0, array.length-1);
+            localExport(writeOutSize, array);
 
             normal = false;
-            int length = array.length;
-
-            if (writeOutSize > 1){
-                int writeOutIndex;
-
-                for (int i = 0; i < writeOutSize - 1; i++) {
-                    String filename = "dxapp/data/sortedData" + i + ".csv";
-                    BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
-                    writeOutIndex = i * length / writeOutSize;
-
-                    for (int j = 0; j < length / writeOutSize; j++) {
-                        outputWriter.write(array[writeOutIndex + j] + ", ");
-                    }
-                    outputWriter.flush();
-                    outputWriter.close();
-                }
-            }
-
-            int name = writeOutSize-1;
-            String filename = "dxapp/data/sortedData"+name+".csv";
-            BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
-
-            for (int i=(writeOutSize-1)*length/writeOutSize; i<length;i++){
-                outputWriter.write(array[i] + ", ");
-            }
-            outputWriter.flush();
-            outputWriter.close();
-            System.out.println("Ende: " + System.nanoTime());
-            }
+        }
         else {
-
-            long[] tmpSizeChunkId = new long[1];
-            chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
-            editChunkInt(writeOutSize, tmpSizeChunkId[0], 1, chunkService);
-
-            nameService.register(tmpSizeChunkId[0], "WO");
 
             short GLOBAL_PEER_MINIMUM = (short) onlineWorkerNodeIDs.size();
             short GLOBAL_PEER_MAXIMUM = (short) onlineWorkerNodeIDs.size();
+
+            long[] tmpSizeChunkId = new long[1];
+
+            chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
+            editChunkInt(writeOutSize, tmpSizeChunkId[0]);
+            nameService.register(tmpSizeChunkId[0], "WO");
 
             // Get resources (number of available cores)
             ResourceTask resourceTask = new ResourceTask();
@@ -268,28 +213,31 @@ public class MergeSort extends AbstractApplication {
             // Save data of the resource-Task
             int[] resources = new int[onlineWorkerNodeIDs.size()];
             int split = 0;
+
             for (int i = 0; i < onlineWorkerNodeIDs.size(); i++) {
                 long chunkID = nameService.getChunkID("RC" + i, 100);
-                resources[i] = getIntData(chunkID, chunkService);
+                resources[i] = getIntData(chunkID);
                 split += resources[i];
             }
 
+            assert inputData != null;
             int sizeOfPartedData = inputData.size() / split;
             int overhead = inputData.size() % split;
 
-            int[] addressChunkSize = new int[onlineWorkerNodeIDs.size()];
-
             // Write Chunk Ids to Matrix
             Iterator<Integer> dataIterator = inputData.iterator();
+
             for (int i = 0; i < onlineWorkerNodeIDs.size(); i++) {
                 long[] tmpIds;
                 long[] tmpAddressChunkId = new long[1];
                 tmpSizeChunkId = new long[1];
 
                 if (overhead > 0) {
+
                     if (overhead >= resources[i]) {
                         tmpIds = new long[resources[i] * (sizeOfPartedData + 1)];
                         overhead -= resources[i];
+
                     } else {
                         tmpIds = new long[sizeOfPartedData + overhead];
                     }
@@ -297,34 +245,26 @@ public class MergeSort extends AbstractApplication {
                     tmpIds = new long[resources[i] * sizeOfPartedData];
                 }
 
-                short actualNodeID = getShortData(nameService.getChunkID("SID" + i, 100), chunkService);
-
+                short actualNodeID = getShortData(nameService.getChunkID("SID" + i, 100));
                 chunkService.create().create(actualNodeID, tmpIds, tmpIds.length, GLOBAL_CHUNK_SIZE);
+
                 for (long tmpId : tmpIds)
-                    editChunkInt(dataIterator.next(), tmpId, 1, chunkService);
+                    editChunkInt(dataIterator.next(), tmpId);
 
                 // Create, register AddressChunk
                 chunkService.create().create(actualNodeID, tmpAddressChunkId, 1, GLOBAL_CHUNK_SIZE * tmpIds.length);
-                editChunkLongArray(tmpIds, tmpAddressChunkId[0], chunkService);
+                editChunkLongArray(tmpIds, tmpAddressChunkId[0]);
                 nameService.register(tmpAddressChunkId[0], "AC" + i);
 
                 // Size of AddressChunk
                 chunkService.create().create(actualNodeID, tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
-                editChunkInt(tmpIds.length, tmpSizeChunkId[0], 1, chunkService);
+                editChunkInt(tmpIds.length, tmpSizeChunkId[0]);
                 nameService.register(tmpSizeChunkId[0], "SAC" + i);
 
-                addressChunkSize[i] = tmpIds.length;
             }
 
-            System.out.println("Größe: " +inputData.size());
-
-            // Create GoThrough-Parameter
             chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
-            editChunkInt(2, tmpSizeChunkId[0], 1, chunkService);
-            nameService.register(tmpSizeChunkId[0], "GT");
-
-            chunkService.create().create(bootService.getNodeID(), tmpSizeChunkId, 1, GLOBAL_CHUNK_SIZE);
-            editChunkInt(onlineWorkerNodeIDs.size(), tmpSizeChunkId[0], 1, chunkService);
+            editChunkInt(onlineWorkerNodeIDs.size(), tmpSizeChunkId[0]);
             nameService.register(tmpSizeChunkId[0], "WN");
 
             SortTask sortTask = new SortTask();
@@ -345,6 +285,7 @@ public class MergeSort extends AbstractApplication {
 
                 if (cycle % 2 == 0)
                     cycle /= 2;
+
                 else
                     cycle = (int) Math.ceil((double) cycle / 2);
             }
@@ -352,12 +293,6 @@ public class MergeSort extends AbstractApplication {
             ExportTask exportTask = new ExportTask();
             TaskScript exportScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Export Task", exportTask);
             masterSlaveComputeService.submitTaskScript(exportScript);
-
-        /*
-        CleanUpTask cleanUpTask = new CleanUpTask();
-        TaskScript cleanUpScript = new TaskScript(GLOBAL_PEER_MINIMUM, GLOBAL_PEER_MAXIMUM, "Cleanup Task", cleanUpTask);
-        TaskScriptState cleanUpState = masterSlaveComputeService.submitTaskScript(cleanUpScript);
-        */
         }
     }
 
@@ -375,16 +310,13 @@ public class MergeSort extends AbstractApplication {
      *          Integervalue to put
      * @param chunkId
      *          ChunkID of the editable chunk
-     * @param size
-     *          Size definines how many 64-BIT-integer should be written
-     * @param chunkService
-     *          Chunkservice to manage the operation
      */
-    private void editChunkInt(int value, long chunkId, int size , ChunkService chunkService) {
-        ByteBuffer byteBuffer = ByteBuffer.allocate(size*GLOBAL_CHUNK_SIZE);
+    private void editChunkInt(int value, long chunkId ) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(GLOBAL_CHUNK_SIZE);
         byteBuffer.putInt(value);
         ChunkByteArray chunkByteArray = new ChunkByteArray(chunkId, byteBuffer.array());
         chunkService.put().put(chunkByteArray);
+        byteBuffer.clear();
     }
 
     /**
@@ -394,10 +326,8 @@ public class MergeSort extends AbstractApplication {
      *          longarray to put
      * @param chunkId
      *          ChunkID of the editable chunk
-     * @param chunkService
-     *          Chunkservice to manage the operation
      */
-    private void editChunkLongArray(long[] array, long chunkId, ChunkService chunkService) {
+    private void editChunkLongArray(long[] array, long chunkId) {
         ByteBuffer byteBuffer = ByteBuffer.allocate(array.length*GLOBAL_CHUNK_SIZE);
         LongBuffer longBuffer = byteBuffer.asLongBuffer();
         longBuffer.put(array);
@@ -409,15 +339,14 @@ public class MergeSort extends AbstractApplication {
      * Get the integervalue of a chunk
      * @param chunkId
      *          ID of the chunk
-     * @param chunkService
-     *          Chunkservice to manage the operation
      * @return
      *      Integervalue of the chunk
      */
-    private int getIntData(long chunkId, ChunkService chunkService){
+    private int getIntData(long chunkId){
         ChunkByteArray chunk = new ChunkByteArray(chunkId, GLOBAL_CHUNK_SIZE);
         chunkService.get().get(chunk);
         byte[] byteData = chunk.getData();
+
         return ByteBuffer.wrap(byteData).getInt();
     }
 
@@ -425,15 +354,14 @@ public class MergeSort extends AbstractApplication {
      * Get the shortvalue of a chunk
      * @param chunkId
      *          ID of the chunk
-     * @param chunkService
-     *          Chunkservice to manage the operation
      * @return
      *      Shortvalue of the chunk
      */
-    private short getShortData(long chunkId, ChunkService chunkService){
+    private short getShortData(long chunkId){
         ChunkByteArray chunk = new ChunkByteArray(chunkId, GLOBAL_CHUNK_SIZE);
         chunkService.get().get(chunk);
         byte[] byteData = chunk.getData();
+
         return ByteBuffer.wrap(byteData).getShort();
     }
 
@@ -441,12 +369,12 @@ public class MergeSort extends AbstractApplication {
      * Reads the values of a file line by line into an arraylist
      * @param filepath
      *          Defines the filepath
-     * @param seperator
-     *          Defines the seperator in example ", "
+     * @param separator
+     *          Defines the separator in example ", "
      * @return
      *          Returns a list containing the values
      */
-    private List<Integer> readData(String filepath, String seperator) throws IOException {
+    private List<Integer> readData(String filepath, String separator) throws IOException {
         List<Integer> list = new ArrayList<>();
 
         File file = new File(filepath);
@@ -454,7 +382,8 @@ public class MergeSort extends AbstractApplication {
         String readLine = "";
 
         while ((readLine = bufferedReader.readLine()) != null){
-            List<String> items = Arrays.asList(readLine.split(seperator));
+            List<String> items = Arrays.asList(readLine.split(separator));
+
             for (String s : items)
                 list.add(Integer.valueOf(s));
         }
@@ -462,68 +391,80 @@ public class MergeSort extends AbstractApplication {
         return list;
     }
 
-    private static void mergeJvN(int[] array, int left, int breakpoint, int right) {
+    /**
+     * Merges two halfs of an array seperated through a breakpointindex based on John von Neumann algorithm
+     *
+     * @param array
+     *          Array which contains both halfs
+     * @param start
+     *          Startindex of the left half
+     * @param breakpoint
+     *          Startindex of the right half
+     * @param end
+     *          Endindex of the right half
+     */
+    private static void mergeJvN(int[] array, int start, int breakpoint, int end) {
         int i, j, k;
-        int n1 = breakpoint - left + 1;
-        int n2 =  right - breakpoint;
+        int sizeLeft = breakpoint - start + 1;
+        int sizeRight =  end - breakpoint;
 
-        // create temp arrays
-        int[] L = new int[n1];
-        int[] R = new int[n2];
+        int[] left = new int[sizeLeft];
+        int[] right = new int[sizeRight];
 
-        // Copy data to temp arrays L[] and R[]
-        for (i = 0; i < n1; i++)
-            L[i] = array[left + i];
-        for (j = 0; j < n2; j++)
-            R[j] = array[breakpoint + 1+ j];
+        for (i = 0; i < sizeLeft; i++)
+            left[i] = array[start + i];
 
-        // Merge the temp arrays back into arr[l..r]
-        i = 0; // Initial index of first subarray
-        j = 0; // Initial index of second subarray
-        k = left; // Initial index of merged subarray
-        while (i < n1 && j < n2)
-        {
-            if (L[i] <= R[j])
-            {
-                array[k] = L[i];
+        for (j = 0; j < sizeRight; j++)
+            right[j] = array[breakpoint + 1+ j];
+
+        i = 0;
+        j = 0;
+        k = start;
+
+        while (i < sizeLeft && j < sizeRight) {
+            if (left[i] <= right[j]) {
+                array[k] = left[i];
                 i++;
             }
-            else
-            {
-                array[k] = R[j];
+            else {
+                array[k] = right[j];
                 j++;
             }
+
             k++;
         }
 
-        //Copy the remaining elements of L[], if there are any
-        while (i < n1)
-        {
-            array[k] = L[i];
+        while (i < sizeLeft) {
+            array[k] = left[i];
             i++;
             k++;
         }
 
-        // Copy the remaining elements of R[], if there are any
-        while (j < n2)
-        {
-            array[k] = R[j];
+        while (j < sizeRight) {
+            array[k] = right[j];
             j++;
             k++;
         }
     }
-    private static void mergeSortJvN(int[] array, int left, int right) {
-        if (left < right)
-        {
-            // Same as (l+r)/2, but avoids overflow for
-            // large l and h
-            int m = left+(right-left)/2;
 
-            // Sort first and second halves
-            mergeSortJvN(array, left, m);
-            mergeSortJvN(array, m+1, right);
+    /**
+     * Sorting an array with mergesortalgorithm based on John von Neumann
+     *
+     * @param array
+     *          Array to sort
+     * @param start
+     *          Startindex of the array
+     * @param end
+     *          Endindex of the array
+     */
+    private static void mergeSortJvN(int[] array, int start, int end) {
+        if (start < end) {
+            int m = start+(end-start)/2;
 
-            mergeJvN(array, left, m, right);
+            mergeSortJvN(array, start, m);
+            mergeSortJvN(array, m+1, end);
+
+            mergeJvN(array, start, m, end);
         }
     }
 
@@ -539,9 +480,69 @@ public class MergeSort extends AbstractApplication {
         for (int i=0; i<2*blockIndex;i++){
             start += partialListLength[i];
         }
+
         breakpoint = start + partialListLength[2*blockIndex];
         end = breakpoint + partialListLength[2*blockIndex+1] -1;
 
         threads[blockIndex] = new MergeAlgorithm(array,start,end,breakpoint);
+    }
+
+    /**
+     * Exports the sorted data into one or many csv-files
+     *
+     * @param writeOutSize
+     *          Number of files to be written
+     * @param array
+     *          Array to export
+     */
+    private static void localExport(int writeOutSize, int[] array) throws IOException {
+
+        int length = array.length;
+
+        if (writeOutSize > 0){
+            int writeOutIndex;
+
+            for (int i = 0; i < writeOutSize - 1; i++) {
+                String filename = "dxapp/data/sortedData" + i + ".csv";
+                BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
+                writeOutIndex = i * length / writeOutSize;
+
+                for (int j = 0; j < length / writeOutSize; j++)
+                    outputWriter.write(array[writeOutIndex + j] + ", ");
+
+                outputWriter.flush();
+                outputWriter.close();
+            }
+
+            int name = writeOutSize-1;
+            String filename = "dxapp/data/sortedData"+name+".csv";
+            BufferedWriter outputWriter = new BufferedWriter(new FileWriter(filename));
+
+            for (int i=(writeOutSize-1)*length/writeOutSize; i<length;i++)
+                outputWriter.write(array[i] + ", ");
+
+            outputWriter.flush();
+            outputWriter.close();
+        }
+
+    }
+
+    /**
+     * Converts an List to an int-Array
+     * @param inputData
+     *          The List to convert
+     * @return
+     *          Returns the array
+     */
+    private static int[] localImport(List<Integer> inputData){
+        int[] array = new int[inputData.size()];
+
+        for (int i=0; i<array.length;i++){
+            array[i] = inputData.get(i);
+        }
+
+        inputData.clear();
+
+        return array;
     }
 }

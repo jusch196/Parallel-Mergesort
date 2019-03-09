@@ -32,10 +32,10 @@ SortAlgorithm(int[] array, int start, int length){
  */
 private static void merge(int start, int length, int breakpoint) {
 
-        int[] finalArray = new int[length];
         int indexLeft = 0;
         int indexRight = 0;
         int finalIndex = 0;
+        int[] finalArray = new int[length];
 
         while (indexLeft < breakpoint && indexRight < length-breakpoint) {
 
@@ -48,16 +48,19 @@ private static void merge(int start, int length, int breakpoint) {
                 }
                 finalIndex++;
         }
+
         while (indexLeft < breakpoint) {
                 finalArray[finalIndex] = array[start + indexLeft];
                 indexLeft++;
                 finalIndex++;
         }
+
         while (indexRight < length-breakpoint) {
                 finalArray[finalIndex] = array[start +breakpoint + indexRight];
                 indexRight++;
                 finalIndex++;
         }
+
         System.arraycopy(finalArray, 0, array, start, finalIndex);
 }
 
@@ -74,6 +77,7 @@ private static void sort(int startIndex, int endIndex){
         if ( endIndex > 1) {
                 sort(startIndex, (endIndex/2));
                 sort(startIndex+(endIndex/2), (endIndex-(endIndex/2)));
+
                 merge(startIndex, endIndex, endIndex/2);
         }
 
